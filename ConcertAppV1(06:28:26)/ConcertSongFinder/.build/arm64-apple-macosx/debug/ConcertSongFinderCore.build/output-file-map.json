@@ -1,0 +1,103 @@
+{
+  "": {
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/primary.swiftdeps"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/LyricMatching/DefaultLyricMatchingService.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultLyricMatchingService.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultLyricMatchingService.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultLyricMatchingService~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultLyricMatchingService.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultLyricMatchingService.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/MediaClassification/DefaultMediaClassificationService.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultMediaClassificationService.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultMediaClassificationService.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultMediaClassificationService~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultMediaClassificationService.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultMediaClassificationService.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Mocks/MockServices.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/MockServices.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/MockServices.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/MockServices~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/MockServices.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/MockServices.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Models/CoreModels.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/CoreModels.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/CoreModels.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/CoreModels~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/CoreModels.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/CoreModels.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Persistence/AnalysisRecord.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/AnalysisRecord.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/AnalysisRecord.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/AnalysisRecord~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/AnalysisRecord.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/AnalysisRecord.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Persistence/ConcertRecord.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertRecord.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertRecord.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertRecord~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertRecord.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertRecord.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Services/ServiceProtocols.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ServiceProtocols.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ServiceProtocols.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ServiceProtocols~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ServiceProtocols.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ServiceProtocols.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/SetlistAlignment/DefaultSetlistAlignmentService.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultSetlistAlignmentService.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultSetlistAlignmentService.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultSetlistAlignmentService~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultSetlistAlignmentService.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultSetlistAlignmentService.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Timeline/DefaultTimelineBuilder.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultTimelineBuilder.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultTimelineBuilder.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultTimelineBuilder~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultTimelineBuilder.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/DefaultTimelineBuilder.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Timeline/RecognitionWindowPlanner.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/RecognitionWindowPlanner.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/RecognitionWindowPlanner.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/RecognitionWindowPlanner~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/RecognitionWindowPlanner.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/RecognitionWindowPlanner.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Utilities/ConcertVideoOrdering.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertVideoOrdering.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertVideoOrdering.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertVideoOrdering~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertVideoOrdering.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/ConcertVideoOrdering.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Utilities/PhoneticEncoder.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/PhoneticEncoder.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/PhoneticEncoder.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/PhoneticEncoder~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/PhoneticEncoder.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/PhoneticEncoder.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Utilities/Similarity.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/Similarity.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/Similarity.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/Similarity~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/Similarity.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/Similarity.dia"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/Sources/ConcertSongFinderCore/Utilities/TextNormalizer.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/TextNormalizer.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/TextNormalizer.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/TextNormalizer~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/TextNormalizer.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderCore.build/TextNormalizer.dia"
+  }
+}

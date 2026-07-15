@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderPackageTests.build/primary.swiftdeps"
+  },
+  "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderPackageTests.build/runner.d",
+    "object": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/anshuagg/ConcertDetectionApp/ConcertAppV1(06:28:26)/ConcertSongFinder/.build/arm64-apple-macosx/debug/ConcertSongFinderPackageTests.build/runner.dia"
+  }
+}
