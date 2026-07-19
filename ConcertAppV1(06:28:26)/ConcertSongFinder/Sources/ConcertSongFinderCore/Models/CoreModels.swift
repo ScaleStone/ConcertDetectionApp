@@ -35,6 +35,49 @@ public struct ConcertVideo: Identifiable, Codable, Hashable {
         self.analysisStatus = analysisStatus
         self.segments = segments
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, localIdentifier, localURL, fileName, createdAt, duration, location, originalSelectionIndex, analysisStatus, segments
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.localIdentifier = try container.decodeIfPresent(String.self, forKey: .localIdentifier)
+        let decodedURL = try container.decode(URL.self, forKey: .localURL)
+        let fileName = try container.decode(String.self, forKey: .fileName)
+        // Persisted URLs are absolute and break when iOS relocates the app
+        // container (update/restore). Re-resolve against the current
+        // container when the stored path no longer exists.
+        self.localURL = MediaFileResolver.resolvedURL(decodedURL: decodedURL, fileName: fileName)
+        self.fileName = fileName
+        self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        self.duration = try container.decode(TimeInterval.self, forKey: .duration)
+        self.location = try container.decodeIfPresent(VideoLocation.self, forKey: .location)
+        self.originalSelectionIndex = try container.decodeIfPresent(Int.self, forKey: .originalSelectionIndex) ?? 0
+        self.analysisStatus = try container.decode(AnalysisStatus.self, forKey: .analysisStatus)
+        self.segments = try container.decodeIfPresent([SongSegment].self, forKey: .segments) ?? []
+    }
+}
+
+/// Resolves persisted media URLs against the current app container.
+enum MediaFileResolver {
+    static func resolvedURL(decodedURL: URL, fileName: String) -> URL {
+        if FileManager.default.fileExists(atPath: decodedURL.path) {
+            return decodedURL
+        }
+        guard let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return decodedURL
+        }
+        let candidate = supportDirectory
+            .appendingPathComponent("ConcertSongFinder", isDirectory: true)
+            .appendingPathComponent("Videos", isDirectory: true)
+            .appendingPathComponent(fileName, isDirectory: false)
+        if FileManager.default.fileExists(atPath: candidate.path) {
+            return candidate
+        }
+        return decodedURL
+    }
 }
 
 public struct ConcertPhoto: Identifiable, Codable, Hashable {
@@ -83,6 +126,30 @@ public struct ConcertPhoto: Identifiable, Codable, Hashable {
         self.assignedVideoID = assignedVideoID
         self.assignedSegmentID = assignedSegmentID
         self.concertTiming = concertTiming
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, localIdentifier, localURL, fileName, createdAt, location, originalSelectionIndex, classificationStatus, primaryCandidate, alternativeCandidates, evidence, assignedVideoID, assignedSegmentID, concertTiming
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.localIdentifier = try container.decodeIfPresent(String.self, forKey: .localIdentifier)
+        let decodedURL = try container.decode(URL.self, forKey: .localURL)
+        let fileName = try container.decode(String.self, forKey: .fileName)
+        self.localURL = MediaFileResolver.resolvedURL(decodedURL: decodedURL, fileName: fileName)
+        self.fileName = fileName
+        self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        self.location = try container.decodeIfPresent(VideoLocation.self, forKey: .location)
+        self.originalSelectionIndex = try container.decodeIfPresent(Int.self, forKey: .originalSelectionIndex) ?? 0
+        self.classificationStatus = try container.decodeIfPresent(SegmentStatus.self, forKey: .classificationStatus) ?? .unknown
+        self.primaryCandidate = try container.decodeIfPresent(SongCandidate.self, forKey: .primaryCandidate)
+        self.alternativeCandidates = try container.decodeIfPresent([SongCandidate].self, forKey: .alternativeCandidates) ?? []
+        self.evidence = try container.decodeIfPresent(RecognitionEvidence.self, forKey: .evidence) ?? RecognitionEvidence()
+        self.assignedVideoID = try container.decodeIfPresent(UUID.self, forKey: .assignedVideoID)
+        self.assignedSegmentID = try container.decodeIfPresent(UUID.self, forKey: .assignedSegmentID)
+        self.concertTiming = try container.decodeIfPresent(PhotoConcertTiming.self, forKey: .concertTiming)
     }
 }
 

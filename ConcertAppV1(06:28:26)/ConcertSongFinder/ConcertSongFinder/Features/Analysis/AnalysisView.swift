@@ -24,14 +24,19 @@ struct AnalysisView: View {
     }
 
     private func startAnalysisIfNeeded() async {
-        guard !holder.hasStartedAnalysis else { return }
-        holder.hasStartedAnalysis = true
+        // The analysis runs in a task owned by the view model, so it is NOT
+        // cancelled when this view disappears (e.g. the user switches tabs).
+        // Re-entering this view awaits the same task instead of restarting.
+        let viewModel: AnalysisViewModel
+        if let existing = holder.viewModel {
+            viewModel = existing
+        } else {
+            AppLog.analysis.info("Analysis task started for record \(record.id.uuidString, privacy: .public)")
+            viewModel = AnalysisViewModel(record: record, environment: environment)
+            holder.viewModel = viewModel
+        }
 
-        AppLog.analysis.info("Analysis task started for record \(record.id.uuidString, privacy: .public)")
-        let viewModel = AnalysisViewModel(record: record, environment: environment)
-        holder.viewModel = viewModel
-
-        let completed = await viewModel.analyze()
+        let completed = await viewModel.startAnalysis().value
         AppLog.analysis.info("Analysis task returned stage=\(completed.currentStage.rawValue, privacy: .public) videoStatuses=\(completed.videos.map { $0.analysisStatus.rawValue }.joined(separator: ","), privacy: .public) segmentCounts=\(completed.videos.map { String($0.segments.count) }.joined(separator: ","), privacy: .public)")
 
         if completed.currentStage == .canceled {
@@ -72,5 +77,4 @@ struct AnalysisView: View {
 
 private final class AnalysisViewModelHolder: ObservableObject {
     @Published var viewModel: AnalysisViewModel?
-    var hasStartedAnalysis = false
 }

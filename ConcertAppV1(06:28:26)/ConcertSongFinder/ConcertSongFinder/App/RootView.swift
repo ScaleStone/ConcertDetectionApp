@@ -66,12 +66,16 @@ struct RootView: View {
 
     private func persistCompletedConcert(_ record: AnalysisRecord) {
         do {
+            // Multi-concert batches split into one concert per timestamp
+            // cluster; single-cluster/legacy records persist exactly as before.
             let existingConcerts = try environment.concertLibraryStore.loadConcerts()
-            let existing = existingConcerts.first { $0.id == record.id }
-                ?? existingConcerts.first { $0.matches(analysisRecord: record) }
-            let concert = existing?.merged(with: record) ?? ConcertRecord.newConcert(from: record)
-            try environment.concertLibraryStore.upsertConcert(concert)
-            AppLog.concertLibrary.info("RootView persisted completed concert=\(concert.id.uuidString, privacy: .public) record=\(record.id.uuidString, privacy: .public) videos=\(concert.videos.count, privacy: .public) photos=\(concert.photos.count, privacy: .public) stage=\(concert.currentStage.rawValue, privacy: .public)")
+            for subRecord in record.perClusterAnalysisRecords() {
+                let existing = existingConcerts.first { $0.id == subRecord.id }
+                    ?? existingConcerts.first { $0.matches(analysisRecord: subRecord) }
+                let concert = existing?.merged(with: subRecord) ?? ConcertRecord.newConcert(from: subRecord)
+                try environment.concertLibraryStore.upsertConcert(concert)
+                AppLog.concertLibrary.info("RootView persisted concert=\(concert.id.uuidString, privacy: .public) record=\(record.id.uuidString, privacy: .public) title=\(concert.displayTitle, privacy: .public) videos=\(concert.videos.count, privacy: .public) photos=\(concert.photos.count, privacy: .public)")
+            }
         } catch {
             AppLog.concertLibrary.error("RootView failed to persist completed concert record=\(record.id.uuidString, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
         }

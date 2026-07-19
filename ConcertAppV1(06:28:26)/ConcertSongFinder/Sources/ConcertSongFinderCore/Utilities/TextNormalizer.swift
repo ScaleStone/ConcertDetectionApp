@@ -41,6 +41,24 @@ public enum TextNormalizer {
         return value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// A looser title key for matching recognized songs against setlist
+    /// entries: strips parenthetical/bracketed qualifiers and featured-artist
+    /// clauses so "Dramatic Girl (feat. Che Ecru)" matches "Dramatic Girl".
+    public static func comparableSongTitle(_ title: String) -> String {
+        var value = title.replacingOccurrences(
+            of: "\\([^)]*\\)|\\[[^\\]]*\\]",
+            with: " ",
+            options: .regularExpression
+        )
+        value = normalizeSongTitle(value)
+        for marker in [" feat ", " featuring ", " ft ", " with "] {
+            if let range = value.range(of: marker) {
+                value = String(value[..<range.lowerBound])
+            }
+        }
+        return value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     public static func normalizeText(_ text: String) -> String {
         var value = text.lowercased()
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))

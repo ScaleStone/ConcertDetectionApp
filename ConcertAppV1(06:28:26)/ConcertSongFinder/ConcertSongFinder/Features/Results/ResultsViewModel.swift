@@ -54,11 +54,53 @@ final class ResultsViewModel: ObservableObject {
     func deleteHistory() {
         do {
             try environment.historyStore.deleteRecord(id: record.id)
-            try environment.concertLibraryStore.deleteConcert(id: record.id)
-            AppLog.analysis.info("Deleted saved analysis and concert record=\(self.record.id.uuidString, privacy: .public)")
+            // Multi-cluster analyses may have produced several concerts; find
+            // and delete each one (by id first, then by concert match).
+            let concerts = try environment.concertLibraryStore.loadConcerts()
+            var deletedConcertIDs: Set<UUID> = []
+            for subRecord in record.perClusterAnalysisRecords() {
+                let matchingConcert = concerts.first { $0.id == subRecord.id }
+                    ?? concerts.first { $0.matches(analysisRecord: subRecord) && !deletedConcertIDs.contains($0.id) }
+                if let matchingConcert {
+                    try environment.concertLibraryStore.deleteConcert(id: matchingConcert.id)
+                    deletedConcertIDs.insert(matchingConcert.id)
+                }
+            }
+            cleanUpOrphanedMediaFiles(deletedConcertIDs: deletedConcertIDs)
+            AppLog.analysis.info("Deleted saved analysis record=\(self.record.id.uuidString, privacy: .public) concerts=\(deletedConcertIDs.count, privacy: .public)")
         } catch {
             errorMessage = "Could not delete saved analysis."
             AppLog.analysis.error("Failed to delete saved analysis record=\(self.record.id.uuidString, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Removes this record's imported media files from the app container
+    /// unless another saved record or concert still references them.
+    private func cleanUpOrphanedMediaFiles(deletedConcertIDs: Set<UUID>) {
+        let candidateURLs = Set(record.videos.map(\.localURL) + record.photos.map(\.localURL))
+        guard !candidateURLs.isEmpty else { return }
+
+        var referencedPaths: Set<String> = []
+        if let remainingRecords = try? environment.historyStore.loadRecords() {
+            for other in remainingRecords where other.id != record.id {
+                referencedPaths.formUnion(other.videos.map(\.localURL.path))
+                referencedPaths.formUnion(other.photos.map(\.localURL.path))
+            }
+        }
+        if let remainingConcerts = try? environment.concertLibraryStore.loadConcerts() {
+            for concert in remainingConcerts where !deletedConcertIDs.contains(concert.id) {
+                referencedPaths.formUnion(concert.videos.map(\.localURL.path))
+                referencedPaths.formUnion(concert.photos.map(\.localURL.path))
+            }
+        }
+
+        for url in candidateURLs where !referencedPaths.contains(url.path) {
+            do {
+                try FileManager.default.removeItem(at: url)
+                AppLog.analysis.info("Removed orphaned media file \(url.lastPathComponent, privacy: .public)")
+            } catch {
+                AppLog.analysis.error("Could not remove orphaned media file \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            }
         }
     }
 
@@ -92,10 +134,31 @@ final class ResultsViewModel: ObservableObject {
             record.updatedAt = Date()
             records.append(record)
             try environment.historyStore.saveRecords(records)
+            syncConcertLibrary()
             AppLog.analysis.info("Persisted results record=\(self.record.id.uuidString, privacy: .public) videoCount=\(self.record.videos.count, privacy: .public) photoCount=\(self.record.photos.count, privacy: .public)")
         } catch {
             errorMessage = "Could not save corrections."
             AppLog.analysis.error("Failed to persist results record=\(self.record.id.uuidString, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Keeps the concert library in sync with user corrections so
+    /// My Concerts reflects the latest segment assignments. Multi-cluster
+    /// analyses sync each cluster into its own concert.
+    private func syncConcertLibrary() {
+        do {
+            let concerts = try environment.concertLibraryStore.loadConcerts()
+            for subRecord in record.perClusterAnalysisRecords() {
+                guard let existing = concerts.first(where: { $0.id == subRecord.id })
+                    ?? concerts.first(where: { $0.matches(analysisRecord: subRecord) }) else {
+                    continue
+                }
+                let updated = existing.merged(with: subRecord)
+                try environment.concertLibraryStore.upsertConcert(updated)
+                AppLog.concertLibrary.info("Synced corrections into concert library concert=\(updated.id.uuidString, privacy: .public) record=\(self.record.id.uuidString, privacy: .public)")
+            }
+        } catch {
+            AppLog.concertLibrary.error("Failed to sync corrections into concert library record=\(self.record.id.uuidString, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
         }
     }
 }

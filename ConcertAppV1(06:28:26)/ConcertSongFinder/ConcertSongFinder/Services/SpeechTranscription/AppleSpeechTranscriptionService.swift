@@ -31,15 +31,18 @@ final class AppleSpeechTranscriptionService: SpeechTranscriptionService {
         request.taskHint = .dictation
 
         return try await withCheckedThrowingContinuation { continuation in
-            var didResume = false
+            // The recognizer callback and the timeout task run on different
+            // threads; guard the continuation so it can only resume once.
+            let resumeGuard = ResumeOnceGuard()
             let task = recognizer.recognitionTask(with: request) { result, error in
-                if let error, !didResume {
-                    didResume = true
-                    continuation.resume(throwing: error)
+                if let error {
+                    if resumeGuard.tryResume() {
+                        continuation.resume(throwing: error)
+                    }
                     return
                 }
-                guard let result, result.isFinal, !didResume else { return }
-                didResume = true
+                guard let result, result.isFinal else { return }
+                guard resumeGuard.tryResume() else { return }
                 let best = result.bestTranscription
                 var alternatives: [TranscriptAlternative] = [
                     TranscriptAlternative(
@@ -69,9 +72,8 @@ final class AppleSpeechTranscriptionService: SpeechTranscriptionService {
 
             Task {
                 try? await Task.sleep(nanoseconds: 60_000_000_000)
-                if !didResume {
+                if resumeGuard.tryResume() {
                     task.cancel()
-                    didResume = true
                     continuation.resume(throwing: ConcertSongFinderError.speechRecognizerUnavailable)
                 }
             }
@@ -111,6 +113,20 @@ final class AppleSpeechTranscriptionService: SpeechTranscriptionService {
                 continuation.resume(returning: status)
             }
         }
+    }
+}
+
+/// Thread-safe one-shot flag so a CheckedContinuation is never resumed twice.
+private final class ResumeOnceGuard: @unchecked Sendable {
+    private let lock = NSLock()
+    private var resumed = false
+
+    func tryResume() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if resumed { return false }
+        resumed = true
+        return true
     }
 }
 

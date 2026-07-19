@@ -56,6 +56,7 @@ struct MyConcertsView: View {
             let concert = concerts[index]
             do {
                 try environment.concertLibraryStore.deleteConcert(id: concert.id)
+                cleanUpOrphanedMediaFiles(for: concert)
                 AppLog.concertLibrary.info("Deleted concert from My Concerts concert=\(concert.id.uuidString, privacy: .public)")
             } catch {
                 errorMessage = "Could not delete concert."
@@ -63,6 +64,36 @@ struct MyConcertsView: View {
             }
         }
         loadConcerts()
+    }
+
+    /// Removes the deleted concert's imported media files unless another
+    /// concert or a saved analysis still references them.
+    private func cleanUpOrphanedMediaFiles(for concert: ConcertRecord) {
+        let candidateURLs = Set(concert.videos.map(\.localURL) + concert.photos.map(\.localURL))
+        guard !candidateURLs.isEmpty else { return }
+
+        var referencedPaths: Set<String> = []
+        if let remainingConcerts = try? environment.concertLibraryStore.loadConcerts() {
+            for other in remainingConcerts where other.id != concert.id {
+                referencedPaths.formUnion(other.videos.map(\.localURL.path))
+                referencedPaths.formUnion(other.photos.map(\.localURL.path))
+            }
+        }
+        if let records = try? environment.historyStore.loadRecords() {
+            for record in records {
+                referencedPaths.formUnion(record.videos.map(\.localURL.path))
+                referencedPaths.formUnion(record.photos.map(\.localURL.path))
+            }
+        }
+
+        for url in candidateURLs where !referencedPaths.contains(url.path) {
+            do {
+                try FileManager.default.removeItem(at: url)
+                AppLog.concertLibrary.info("Removed orphaned media file \(url.lastPathComponent, privacy: .public)")
+            } catch {
+                AppLog.concertLibrary.error("Could not remove orphaned media file \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 }
 
@@ -77,6 +108,11 @@ private struct ConcertDetailView: View {
                 LabeledContent("Videos", value: "\(concert.videos.count)")
                 LabeledContent("Photos", value: "\(concert.photos.count)")
             }
+            let recognizedGroups = ConcertMediaGrouping.recognizedSongGroups(
+                videos: concert.videos,
+                photos: concert.photos,
+                setlist: concert.selectedSetlist
+            )
             if let setlist = concert.selectedSetlist, !setlist.occurrences.isEmpty {
                 Section("Setlist") {
                     ForEach(setlist.occurrences) { occurrence in
@@ -95,15 +131,36 @@ private struct ConcertDetailView: View {
                         }
                     }
                 }
-            } else {
+            } else if recognizedGroups.isEmpty {
                 Section {
                     ContentUnavailableView("Setlist unavailable", systemImage: "music.note.list", description: Text("This concert needs a detected or selected setlist before it can be organized by song."))
                 }
             }
-            let unknown = UnknownMediaGroup(concert: concert)
+            // Reliably recognized songs that aren't on the setlist (covers,
+            // openers, or concerts where setlist lookup failed) still get a
+            // browsable song label instead of vanishing into Needs Review.
+            if !recognizedGroups.isEmpty {
+                Section(concert.selectedSetlist == nil ? "Recognized Songs" : "Other Recognized Songs") {
+                    ForEach(recognizedGroups) { group in
+                        NavigationLink { RecognizedSongMediaView(concert: concert, group: group) } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(group.song.title).font(.headline)
+                                    Text(group.song.artist).font(.subheadline).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Text("\(group.videoSegments.count + group.photos.count)")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            let unknown = UnknownMediaGroup(concert: concert, recognizedGroups: recognizedGroups)
             if !unknown.videos.isEmpty || !unknown.photos.isEmpty {
                 Section("Needs Review") {
-                    NavigationLink { UnknownMediaView(group: unknown) } label: {
+                    NavigationLink { UnknownMediaView(concert: concert, group: unknown) } label: {
                         Label("\(unknown.videos.count) videos • \(unknown.photos.count) photos", systemImage: "questionmark.circle")
                     }
                 }
@@ -122,6 +179,16 @@ private struct SongMediaView: View {
     let group: SongMediaGroup
     @State private var selectedVideo: ConcertVideo?
     @State private var selectedPhoto: ConcertPhoto?
+    @State private var shareRequest: MediaShareRequest?
+
+    private var shareContext: MediaShareContext {
+        MediaShareContext(
+            songTitle: group.occurrence.title,
+            artist: group.occurrence.artist,
+            venue: concert.selectedSetlist?.venueName ?? concert.selectedConcert?.venueName,
+            eventDate: concert.concertDate
+        )
+    }
 
     var body: some View {
         List {
@@ -131,48 +198,120 @@ private struct SongMediaView: View {
             if !group.videoSegments.isEmpty {
                 Section("Videos") {
                     ForEach(group.videoSegments) { item in
-                        Button {
+                        ShareableMediaRow {
+                            VideoMediaRow(video: item.video, segment: item.segment)
+                        } onOpen: {
                             selectedVideo = item.video
                             AppLog.concertLibrary.info("Opening video from song media concert=\(concert.id.uuidString, privacy: .public) video=\(item.video.id.uuidString, privacy: .public) song=\(group.occurrence.title, privacy: .public)")
-                        } label: { VideoMediaRow(video: item.video, segment: item.segment) }
+                        } onShare: {
+                            shareRequest = MediaShareRequest(media: .video(item.video), context: shareContext)
+                        }
                     }
                 }
             }
             if !group.photos.isEmpty {
                 Section("Photos") {
                     ForEach(group.photos) { photo in
-                        Button {
+                        ShareableMediaRow {
+                            PhotoMediaRow(photo: photo)
+                        } onOpen: {
                             selectedPhoto = photo
                             AppLog.concertLibrary.info("Opening photo from song media concert=\(concert.id.uuidString, privacy: .public) photo=\(photo.id.uuidString, privacy: .public) song=\(group.occurrence.title, privacy: .public)")
-                        } label: { PhotoMediaRow(photo: photo) }
+                        } onShare: {
+                            shareRequest = MediaShareRequest(media: .photo(photo), context: shareContext)
+                        }
                     }
                 }
             }
         }
         .navigationTitle(group.occurrence.title)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $selectedVideo) { VideoPlayerSheet(video: $0) }
-        .sheet(item: $selectedPhoto) { PhotoViewerSheet(photo: $0) }
+        .sheet(item: $selectedVideo) { VideoPlayerSheet(video: $0, shareContext: shareContext) }
+        .sheet(item: $selectedPhoto) { PhotoViewerSheet(photo: $0, shareContext: shareContext) }
+        .sheet(item: $shareRequest) { ShareMediaSheet(request: $0) }
     }
 }
 
 private struct UnknownMediaView: View {
+    let concert: ConcertRecord
     let group: UnknownMediaGroup
     @State private var selectedVideo: ConcertVideo?
     @State private var selectedPhoto: ConcertPhoto?
+    @State private var shareRequest: MediaShareRequest?
+
+    /// No song identification here, so the share tag carries the concert
+    /// context only (artist/venue/date when known).
+    private var shareContext: MediaShareContext {
+        MediaShareContext(
+            songTitle: nil,
+            artist: concert.selectedSetlist?.artistName ?? concert.selectedConcert?.artistName,
+            venue: concert.selectedSetlist?.venueName ?? concert.selectedConcert?.venueName,
+            eventDate: concert.concertDate
+        )
+    }
 
     var body: some View {
         List {
             if !group.videos.isEmpty {
-                Section("Videos") { ForEach(group.videos) { video in Button { selectedVideo = video } label: { VideoMediaRow(video: video, segment: nil) } } }
+                Section("Videos") {
+                    ForEach(group.videos) { video in
+                        ShareableMediaRow {
+                            VideoMediaRow(video: video, segment: nil)
+                        } onOpen: {
+                            selectedVideo = video
+                        } onShare: {
+                            shareRequest = MediaShareRequest(media: .video(video), context: shareContext)
+                        }
+                    }
+                }
             }
             if !group.photos.isEmpty {
-                Section("Photos") { ForEach(group.photos) { photo in Button { selectedPhoto = photo } label: { PhotoMediaRow(photo: photo) } } }
+                Section("Photos") {
+                    ForEach(group.photos) { photo in
+                        ShareableMediaRow {
+                            PhotoMediaRow(photo: photo)
+                        } onOpen: {
+                            selectedPhoto = photo
+                        } onShare: {
+                            shareRequest = MediaShareRequest(media: .photo(photo), context: shareContext)
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("Needs Review")
-        .sheet(item: $selectedVideo) { VideoPlayerSheet(video: $0) }
-        .sheet(item: $selectedPhoto) { PhotoViewerSheet(photo: $0) }
+        .sheet(item: $selectedVideo) { VideoPlayerSheet(video: $0, shareContext: shareContext) }
+        .sheet(item: $selectedPhoto) { PhotoViewerSheet(photo: $0, shareContext: shareContext) }
+        .sheet(item: $shareRequest) { ShareMediaSheet(request: $0) }
+    }
+}
+
+/// A media list row with a tappable content area (opens the viewer) and a
+/// visible share button on the trailing edge.
+private struct ShareableMediaRow<Content: View>: View {
+    @ViewBuilder let content: Content
+    let onOpen: () -> Void
+    let onShare: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(action: onOpen) {
+                content
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onShare) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.tint)
+                    .frame(width: 40, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Share")
+        }
     }
 }
 
@@ -210,10 +349,13 @@ private struct PhotoMediaRow: View {
 
 private struct VideoPlayerSheet: View {
     let video: ConcertVideo
+    let shareContext: MediaShareContext?
     @State private var player: AVPlayer
+    @State private var shareRequest: MediaShareRequest?
 
-    init(video: ConcertVideo) {
+    init(video: ConcertVideo, shareContext: MediaShareContext? = nil) {
         self.video = video
+        self.shareContext = shareContext
         _player = State(initialValue: AVPlayer(url: video.localURL))
     }
 
@@ -223,6 +365,19 @@ private struct VideoPlayerSheet: View {
                 .ignoresSafeArea()
                 .navigationTitle(video.fileName)
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    if let shareContext {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                shareRequest = MediaShareRequest(media: .video(video), context: shareContext)
+                            } label: {
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                            .accessibilityLabel("Share video")
+                        }
+                    }
+                }
+                .sheet(item: $shareRequest) { ShareMediaSheet(request: $0) }
                 .onAppear {
                     AppLog.concertLibrary.info("Video player appeared video=\(video.id.uuidString, privacy: .public) file=\(video.fileName, privacy: .public)")
                     player.play()
@@ -237,6 +392,13 @@ private struct VideoPlayerSheet: View {
 
 private struct PhotoViewerSheet: View {
     let photo: ConcertPhoto
+    let shareContext: MediaShareContext?
+    @State private var shareRequest: MediaShareRequest?
+
+    init(photo: ConcertPhoto, shareContext: MediaShareContext? = nil) {
+        self.photo = photo
+        self.shareContext = shareContext
+    }
 
     var body: some View {
         NavigationStack {
@@ -250,6 +412,19 @@ private struct PhotoViewerSheet: View {
             }
             .navigationTitle(photo.fileName)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if let shareContext {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            shareRequest = MediaShareRequest(media: .photo(photo), context: shareContext)
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .accessibilityLabel("Share photo")
+                    }
+                }
+            }
+            .sheet(item: $shareRequest) { ShareMediaSheet(request: $0) }
         }
     }
 }
@@ -309,10 +484,61 @@ private struct SongMediaGroup {
     }
 
     private static func matchesCandidate(_ candidate: SongCandidate, occurrence: SetlistOccurrence) -> Bool {
-        if candidate.setlistOccurrenceID == occurrence.id { return true }
-        let candidateKey = TextNormalizer.normalizedSongKey(title: candidate.song.title, artist: candidate.song.artist)
-        let occurrenceKey = TextNormalizer.normalizedSongKey(title: occurrence.title, artist: occurrence.artist)
-        return candidateKey == occurrenceKey
+        ConcertMediaGrouping.candidateMatches(candidate, occurrence: occurrence)
+    }
+}
+
+/// Media list for a recognized song that isn't on the setlist.
+private struct RecognizedSongMediaView: View {
+    let concert: ConcertRecord
+    let group: ConcertMediaGrouping.RecognizedSongGroup
+    @State private var selectedVideo: ConcertVideo?
+    @State private var selectedPhoto: ConcertPhoto?
+    @State private var shareRequest: MediaShareRequest?
+
+    private var shareContext: MediaShareContext {
+        MediaShareContext(
+            songTitle: group.song.title,
+            artist: group.song.artist,
+            venue: concert.selectedSetlist?.venueName ?? concert.selectedConcert?.venueName,
+            eventDate: concert.concertDate
+        )
+    }
+
+    var body: some View {
+        List {
+            if !group.videoSegments.isEmpty {
+                Section("Videos") {
+                    ForEach(group.videoSegments) { item in
+                        ShareableMediaRow {
+                            VideoMediaRow(video: item.video, segment: item.segment)
+                        } onOpen: {
+                            selectedVideo = item.video
+                        } onShare: {
+                            shareRequest = MediaShareRequest(media: .video(item.video), context: shareContext)
+                        }
+                    }
+                }
+            }
+            if !group.photos.isEmpty {
+                Section("Photos") {
+                    ForEach(group.photos) { photo in
+                        ShareableMediaRow {
+                            PhotoMediaRow(photo: photo)
+                        } onOpen: {
+                            selectedPhoto = photo
+                        } onShare: {
+                            shareRequest = MediaShareRequest(media: .photo(photo), context: shareContext)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(group.song.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $selectedVideo) { VideoPlayerSheet(video: $0, shareContext: shareContext) }
+        .sheet(item: $selectedPhoto) { PhotoViewerSheet(photo: $0, shareContext: shareContext) }
+        .sheet(item: $shareRequest) { ShareMediaSheet(request: $0) }
     }
 }
 
@@ -332,12 +558,23 @@ private struct UnknownMediaGroup {
     let videos: [ConcertVideo]
     let photos: [ConcertPhoto]
 
-    init(concert: ConcertRecord) {
-        self.videos = concert.videos.filter { video in
-            video.segments.isEmpty || video.segments.contains { $0.primaryCandidate == nil && $0.evidence.boundedCandidateOptions.isEmpty }
+    /// The exact complement of the media shown under setlist songs and
+    /// recognized-song groups: anything that did not land in at least one
+    /// song group appears here, so no video or photo can ever become
+    /// unreachable in the concert detail view.
+    init(concert: ConcertRecord, recognizedGroups: [ConcertMediaGrouping.RecognizedSongGroup]) {
+        var matchedVideoIDs: Set<UUID> = []
+        var matchedPhotoIDs: Set<UUID> = []
+        for occurrence in concert.selectedSetlist?.occurrences ?? [] {
+            let group = SongMediaGroup(occurrence: occurrence, concert: concert)
+            matchedVideoIDs.formUnion(group.videoSegments.map { $0.video.id })
+            matchedPhotoIDs.formUnion(group.photos.map(\.id))
         }
-        self.photos = concert.photos.filter { photo in
-            photo.primaryCandidate == nil && photo.evidence.boundedCandidateOptions.isEmpty
+        for group in recognizedGroups {
+            matchedVideoIDs.formUnion(group.videoSegments.map { $0.video.id })
+            matchedPhotoIDs.formUnion(group.photos.map(\.id))
         }
+        self.videos = concert.videos.filter { !matchedVideoIDs.contains($0.id) }
+        self.photos = concert.photos.filter { !matchedPhotoIDs.contains($0.id) }
     }
 }

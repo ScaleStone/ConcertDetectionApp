@@ -4,17 +4,18 @@ from fastapi import APIRouter, Depends
 
 from app.config import Settings, get_settings
 from app.models.schemas import ConcertCandidate, ConcertSearchRequest
+from app.security import require_api_key
 from app.services.cache import TTLCache
 from app.services.setlist_fm import SetlistFMClient
 
-router = APIRouter(prefix="/api/concerts", tags=["concerts"])
-cache: TTLCache | None = None
+router = APIRouter(prefix="/api/concerts", tags=["concerts"], dependencies=[Depends(require_api_key)])
+
+# Created eagerly at import time so there is no lazy-init race between
+# concurrent first requests.
+cache = TTLCache(get_settings().cache_ttl_seconds)
 
 
 def get_client(settings: Settings = Depends(get_settings)) -> SetlistFMClient:
-    global cache
-    if cache is None:
-        cache = TTLCache(settings.cache_ttl_seconds)
     return SetlistFMClient(settings=settings, cache=cache)
 
 

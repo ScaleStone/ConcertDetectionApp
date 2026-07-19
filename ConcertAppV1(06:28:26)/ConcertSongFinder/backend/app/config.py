@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,6 +9,7 @@ class Settings(BaseSettings):
     setlist_fm_api_key: str | None = None
     lyrics_provider_api_key: str | None = None
     lyrics_provider_base_url: str | None = None
+    backend_api_key: str | None = None
     cache_ttl_seconds: int = 900
     allowed_origins: str = "http://localhost:3000"
 

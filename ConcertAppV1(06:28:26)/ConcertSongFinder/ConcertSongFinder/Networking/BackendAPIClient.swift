@@ -2,13 +2,15 @@ import ConcertSongFinderCore
 import Foundation
 
 final class BackendAPIClient {
-    let baseURL: URL
+    let baseURL: URL?
+    private let apiKey: String?
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
 
-    init(baseURL: URL, session: URLSession = .shared) {
+    init(baseURL: URL?, apiKey: String? = nil, session: URLSession = .shared) {
         self.baseURL = baseURL
+        self.apiKey = apiKey
         self.session = session
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .custom { decoder in
@@ -24,21 +26,33 @@ final class BackendAPIClient {
         responseType: Response.Type,
         timeout: TimeInterval = 15
     ) async throws -> Response {
-        var request = URLRequest(url: baseURL.appendingPathComponent(path))
+        var request = try makeRequest(path: path, timeout: timeout)
         request.httpMethod = "POST"
-        request.timeoutInterval = timeout
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try encoder.encode(body)
         return try await send(request, responseType: responseType)
     }
 
     func get<Response: Decodable>(_ path: String, responseType: Response.Type, timeout: TimeInterval = 15) async throws -> Response {
-        var request = URLRequest(url: baseURL.appendingPathComponent(path))
+        var request = try makeRequest(path: path, timeout: timeout)
         request.httpMethod = "GET"
+        return try await send(request, responseType: responseType)
+    }
+
+    private func makeRequest(path: String, timeout: TimeInterval) throws -> URLRequest {
+        guard let baseURL else {
+            AppLog.network.error("Backend request rejected because no backend URL is configured path=\(path, privacy: .public)")
+            throw ConcertSongFinderError.unknown(
+                "The backend is not configured. Set CSFBackendBaseURL in Info.plist to your Mac's address (for example http://192.168.1.20:8000)."
+            )
+        }
+        var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        return try await send(request, responseType: responseType)
+        if let apiKey, !apiKey.isEmpty {
+            request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
+        }
+        return request
     }
 
     func checkHealth() async throws {

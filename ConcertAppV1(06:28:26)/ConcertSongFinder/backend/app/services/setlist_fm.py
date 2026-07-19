@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 from datetime import date, datetime, time, timedelta
+from time import monotonic
 from urllib.parse import urlencode
 
-import httpx
 from fastapi import HTTPException
 
 from app.config import Settings
 from app.models.schemas import ConcertCandidate, ConcertSetlist, SetlistOccurrence
 from app.services.cache import TTLCache
+from app.services.http_client import get_shared_client
 from app.services.text import normalize_title
 
 
@@ -28,6 +30,15 @@ KNOWN_VENUES = [
         "matchRadiusKm": 0.35,
     },
 ]
+
+# setlist.fm's free tier allows roughly 2 requests/second. Keep a small gap
+# between upstream calls and cap the total calls a single search can make.
+_MIN_REQUEST_INTERVAL_SECONDS = 0.55
+_MAX_UPSTREAM_REQUESTS_PER_SEARCH = 12
+_MAX_SEARCH_PAGES = 3
+
+_throttle_lock = asyncio.Lock()
+_last_request_at = 0.0
 
 
 class SetlistFMClient:
@@ -51,11 +62,6 @@ class SetlistFMClient:
         if not self.settings.setlist_fm_api_key:
             logger.warning("setlist.fm search skipped because SETLIST_FM_API_KEY is not configured")
             return []
-        logger.info(
-            "setlist.fm API key configured length=%s suffix=%s",
-            len(self.settings.setlist_fm_api_key),
-            self.settings.setlist_fm_api_key[-4:],
-        )
 
         inferred_venue = self._infer_venue_from_location(
             latitude=latitude,
@@ -66,12 +72,20 @@ class SetlistFMClient:
         )
         effective_venue = venue or inferred_venue
         if inferred_venue and not venue:
-            logger.info(
-                "setlist.fm inferred venue from GPS venue=%s latitude=%s longitude=%s",
-                inferred_venue,
-                latitude,
-                longitude,
-            )
+            logger.info("setlist.fm inferred venue from GPS venue=%s", inferred_venue)
+
+        cache_key = self._search_cache_key(
+            artist=artist,
+            event_date=event_date,
+            venue=effective_venue,
+            city_name=city_name,
+            state_code=state_code,
+            country_code=country_code,
+        )
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            logger.info("setlist.fm search cache hit candidates=%s", len(cached))
+            return list(cached)
 
         artist_mbid = await self._artist_mbid_for_name(artist)
         if artist and artist_mbid:
@@ -89,40 +103,51 @@ class SetlistFMClient:
             country_code=country_code,
         )
         logger.info(
-            "setlist.fm location search prepared attempts=%s latitude=%s longitude=%s city=%s state=%s country=%s",
+            "setlist.fm search prepared attempts=%s city=%s state=%s country=%s",
             len(search_attempts),
-            latitude,
-            longitude,
             city_name,
             state_code,
             country_code,
         )
 
-        cache_key = f"search:{search_attempts}:{latitude}:{longitude}"
-        cached = self.cache.get(cache_key)
-        if cached is not None:
-            logger.info("setlist.fm search cache hit key=%s candidates=%s", cache_key, len(cached))
-            return cached
-
         candidates_by_id: dict[str, ConcertCandidate] = {}
+        requests_used = 0
+        rate_limited = False
         for label, params in search_attempts:
+            if requests_used >= _MAX_UPSTREAM_REQUESTS_PER_SEARCH:
+                logger.info("setlist.fm search stopped after reaching request budget=%s", requests_used)
+                break
             candidate_count_before_attempt = len(candidates_by_id)
             try:
-                payload = await self._get("/search/setlists", params=params)
+                raw_setlists, pages_fetched = await self._search_setlists_paginated(
+                    params,
+                    max_pages=min(_MAX_SEARCH_PAGES, _MAX_UPSTREAM_REQUESTS_PER_SEARCH - requests_used),
+                )
+                requests_used += pages_fetched
             except HTTPException as exc:
+                requests_used += 1
                 if exc.status_code == 404:
-                    logger.info("setlist.fm search attempt=%s returned no setlists params=%s", label, params)
+                    logger.info("setlist.fm search attempt=%s returned no setlists", label)
                     continue
+                if exc.status_code == 429 and candidates_by_id:
+                    # Rate limited mid-search: keep what we already found
+                    # instead of discarding good partial results.
+                    logger.warning(
+                        "setlist.fm rate limited during attempt=%s; returning %s partial candidates",
+                        label,
+                        len(candidates_by_id),
+                    )
+                    rate_limited = True
+                    break
                 raise
 
-            raw_setlists = payload.get("setlist", [])
             logger.info(
-                "setlist.fm search attempt=%s params=%s raw_count=%s",
+                "setlist.fm search attempt=%s raw_count=%s pages=%s",
                 label,
-                params,
                 len(raw_setlists),
+                pages_fetched,
             )
-            for item in raw_setlists[:50]:
+            for item in raw_setlists:
                 candidate = self._candidate_from_setlist(
                     item,
                     requested_date=event_date,
@@ -132,6 +157,8 @@ class SetlistFMClient:
                     requested_artist=artist,
                     requested_venue=effective_venue,
                 )
+                if candidate is None:
+                    continue
                 if artist and not self._artist_matches(candidate.artistName, artist):
                     logger.info(
                         "setlist.fm discarded unrelated artist candidate requested=%s candidate=%s id=%s",
@@ -178,9 +205,71 @@ class SetlistFMClient:
                 candidate.city,
                 candidate.eventDate,
                 candidate.confidenceScore,
-        )
-        self.cache.set(cache_key, candidates)
+            )
+        if not rate_limited:
+            # Store a copy so callers cannot mutate the cached list.
+            self.cache.set(cache_key, list(candidates))
         return candidates
+
+    def _search_cache_key(
+        self,
+        artist: str | None,
+        event_date: date | None,
+        venue: str | None,
+        city_name: str | None,
+        state_code: str | None,
+        country_code: str | None,
+    ) -> str:
+        def norm(value: str | None) -> str:
+            return (value or "").strip().casefold()
+
+        return "search:" + urlencode(
+            [
+                ("artist", norm(artist)),
+                ("date", event_date.isoformat() if event_date else ""),
+                ("venue", norm(venue)),
+                ("city", norm(city_name)),
+                ("state", norm(state_code)),
+                ("country", norm(country_code)),
+            ]
+        )
+
+    async def _search_setlists_paginated(
+        self,
+        params: dict[str, str],
+        max_pages: int,
+    ) -> tuple[list[dict], int]:
+        """Fetch up to max_pages pages of search results, aggregating items."""
+        aggregated: list[dict] = []
+        page = 1
+        pages_fetched = 0
+        while page <= max(1, max_pages):
+            page_params = dict(params)
+            if page > 1:
+                page_params["p"] = str(page)
+            try:
+                payload = await self._get("/search/setlists", params=page_params)
+            except HTTPException as exc:
+                if exc.status_code == 404 and page > 1:
+                    break
+                if pages_fetched:
+                    # Keep earlier pages if a later page fails.
+                    logger.warning(
+                        "setlist.fm pagination stopped early page=%s status=%s", page, exc.status_code
+                    )
+                    break
+                raise
+            pages_fetched += 1
+            aggregated.extend(payload.get("setlist", []))
+
+            total = payload.get("total")
+            items_per_page = payload.get("itemsPerPage")
+            if not isinstance(total, int) or not isinstance(items_per_page, int) or items_per_page <= 0:
+                break
+            if page * items_per_page >= total:
+                break
+            page += 1
+        return aggregated, max(pages_fetched, 1)
 
     def _infer_venue_from_location(
         self,
@@ -212,12 +301,6 @@ class SetlistFMClient:
                 longitude,
                 venue["latitude"],
                 venue["longitude"],
-            )
-            logger.info(
-                "setlist.fm GPS venue candidate venue=%s distanceKm=%.3f radiusKm=%.3f",
-                venue["name"],
-                distance,
-                venue["matchRadiusKm"],
             )
             if distance <= venue["matchRadiusKm"] and (nearest_distance is None or distance < nearest_distance):
                 nearest_name = venue["name"]
@@ -264,6 +347,9 @@ class SetlistFMClient:
         state_code = cleaned(state_code)
         country_code = cleaned(country_code)
 
+        artist_key = "artistMbid" if artist_mbid else "artistName"
+        artist_value = artist_mbid or artist
+
         dates: list[tuple[str, date | None]] = [("exact-date", event_date)]
         if event_date is not None:
             dates.extend([
@@ -284,8 +370,6 @@ class SetlistFMClient:
 
         for date_label, candidate_date in dates:
             date_text = candidate_date.strftime("%d-%m-%Y") if candidate_date else None
-            artist_key = "artistMbid" if artist_mbid else "artistName"
-            artist_value = artist_mbid or artist
             base = {
                 artist_key: artist_value,
                 "date": date_text,
@@ -320,47 +404,55 @@ class SetlistFMClient:
                     "countryCode": country_code,
                 },
             )
+            # Location-only attempts must stay bounded: require both a date and
+            # a city so we never issue undated or worldwide queries.
+            if date_text and city_name:
+                add(
+                    f"{date_label}:location-city-state-country",
+                    {
+                        "date": date_text,
+                        "cityName": city_name,
+                        "stateCode": state_code,
+                        "countryCode": country_code,
+                    },
+                )
+                add(
+                    f"{date_label}:location-city-country",
+                    {
+                        "date": date_text,
+                        "cityName": city_name,
+                        "countryCode": country_code,
+                    },
+                )
+                add(
+                    f"{date_label}:location-city",
+                    {
+                        "date": date_text,
+                        "cityName": city_name,
+                    },
+                )
+            # An artist-date attempt without an artist would collapse to a
+            # worldwide date-only search; require the artist.
+            if artist_value and date_text:
+                add(
+                    f"{date_label}:artist-date",
+                    {
+                        artist_key: artist_value,
+                        "date": date_text,
+                    },
+                )
+
+        # Undated fallback needs both an artist and a city to stay bounded.
+        if artist_value and city_name:
             add(
-                f"{date_label}:location-city-state-country",
+                "artist-location-without-date",
                 {
-                    "date": date_text,
+                    artist_key: artist_value,
                     "cityName": city_name,
                     "stateCode": state_code,
                     "countryCode": country_code,
                 },
             )
-            add(
-                f"{date_label}:location-city-country",
-                {
-                    "date": date_text,
-                    "cityName": city_name,
-                    "countryCode": country_code,
-                },
-            )
-            add(
-                f"{date_label}:location-city",
-                {
-                    "date": date_text,
-                    "cityName": city_name,
-                },
-            )
-            add(
-                f"{date_label}:artist-date",
-                {
-                    artist_key: artist_value,
-                    "date": date_text,
-                },
-            )
-
-        add(
-            "artist-location-without-date",
-            {
-                artist_key: artist_value,
-                "cityName": city_name,
-                "stateCode": state_code,
-                "countryCode": country_code,
-            },
-        )
 
         return attempts
 
@@ -372,12 +464,17 @@ class SetlistFMClient:
         cache_key = f"artist-mbid:{artist.casefold()}"
         cached = self.cache.get(cache_key)
         if cached is not None:
-            return cached
+            return cached or None
 
         try:
             payload = await self._get("/search/artists", params={"artistName": artist})
         except HTTPException as exc:
             if exc.status_code == 404:
+                return None
+            if exc.status_code == 429:
+                # Fall back to artistName search instead of failing the
+                # whole concert lookup.
+                logger.warning("setlist.fm rate limited during artist mbid lookup; falling back to name search")
                 return None
             raise
 
@@ -422,23 +519,37 @@ class SetlistFMClient:
         self.cache.set(cache_key, setlist)
         return setlist
 
+    async def _throttle(self) -> None:
+        global _last_request_at
+        async with _throttle_lock:
+            now = monotonic()
+            wait = _last_request_at + _MIN_REQUEST_INTERVAL_SECONDS - now
+            if wait > 0:
+                await asyncio.sleep(wait)
+            _last_request_at = monotonic()
+
     async def _get(self, path: str, params: dict[str, str] | None = None) -> dict:
         headers = {
             "Accept": "application/json",
             "x-api-key": self.settings.setlist_fm_api_key or "",
         }
-        async with httpx.AsyncClient(timeout=12) as client:
-            response = await client.get(f"{self.base_url}{path}", params=params, headers=headers)
-        logger.info("setlist.fm response path=%s status=%s params=%s", path, response.status_code, params)
+        await self._throttle()
+        client = await get_shared_client()
+        response = await client.get(f"{self.base_url}{path}", params=params, headers=headers)
+        logger.info("setlist.fm response path=%s status=%s", path, response.status_code)
         if response.status_code == 404:
             raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No setlist was found."})
         if response.status_code == 429:
-            logger.warning("setlist.fm rate limited body=%s", response.text[:500])
+            logger.warning("setlist.fm rate limited")
             raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "setlist.fm rate limit reached."})
         if response.status_code >= 400:
             logger.error("setlist.fm provider error status=%s body=%s", response.status_code, response.text[:500])
             raise HTTPException(status_code=502, detail={"code": "setlist_provider_error", "message": "setlist.fm request failed."})
-        return response.json()
+        try:
+            return response.json()
+        except ValueError:
+            logger.error("setlist.fm returned a non-JSON body path=%s", path)
+            raise HTTPException(status_code=502, detail={"code": "setlist_provider_error", "message": "setlist.fm returned an invalid response."})
 
     def _candidate_from_setlist(
         self,
@@ -449,7 +560,11 @@ class SetlistFMClient:
         requested_country_code: str | None,
         requested_artist: str | None,
         requested_venue: str | None,
-    ) -> ConcertCandidate:
+    ) -> ConcertCandidate | None:
+        setlist_id = item.get("id")
+        if not setlist_id:
+            logger.warning("setlist.fm search item skipped because it has no id")
+            return None
         event_date = self._parse_event_date(item.get("eventDate"))
         venue = item.get("venue") or {}
         city_payload = venue.get("city") or {}
@@ -472,7 +587,7 @@ class SetlistFMClient:
         if requested_country_code and country.get("code") == requested_country_code:
             score += 0.05
         return ConcertCandidate(
-            id=item.get("id"),
+            id=setlist_id,
             artistName=artist_name,
             venueName=venue.get("name"),
             city=city,
@@ -526,5 +641,9 @@ class SetlistFMClient:
     def _parse_event_date(self, value: str | None) -> datetime | None:
         if not value:
             return None
-        parsed = datetime.strptime(value, "%d-%m-%Y").date()
+        try:
+            parsed = datetime.strptime(value, "%d-%m-%Y").date()
+        except ValueError:
+            logger.warning("setlist.fm returned an unparseable eventDate=%r; ignoring", value)
+            return None
         return datetime.combine(parsed, time.min)

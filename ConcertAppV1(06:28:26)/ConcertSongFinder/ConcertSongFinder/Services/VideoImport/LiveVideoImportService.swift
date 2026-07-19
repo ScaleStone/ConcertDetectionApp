@@ -54,6 +54,9 @@ final class LiveVideoImportService: VideoImportService {
                 try FileManager.default.removeItem(at: destination)
             }
             try FileManager.default.copyItem(at: transferred.url, to: destination)
+            // The transferable produced a temporary copy; remove it now that
+            // the file has been copied into app-controlled storage.
+            try? FileManager.default.removeItem(at: transferred.url)
 
             let phAsset = localIdentifier.flatMap { identifier in
                 PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject
@@ -126,6 +129,8 @@ final class LiveVideoImportService: VideoImportService {
             try FileManager.default.removeItem(at: destination)
         }
         try FileManager.default.copyItem(at: transferred.url, to: destination)
+        // Remove the transferable's temporary copy after import.
+        try? FileManager.default.removeItem(at: transferred.url)
 
         let phAsset = localIdentifier.flatMap { identifier in
             PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject

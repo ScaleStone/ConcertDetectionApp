@@ -18,28 +18,22 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>CSFBackendAPIKey</key>
+	<string>-XoOTG1JM5fdy_n_y3jXATofsjrL4NH2paUUwhNiktI</string>
 	<key>CSFBackendBaseURL</key>
 	<string></string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>192.168.11.28</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<false/>
-			</dict>
-		</dict>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>ConcertSongFinder connects to the local backend running on this Mac during development.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>This app uses speech recognition to transcribe spoken audio from your videos so it can identify concert details.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app may use microphone audio access when preparing audio for speech recognition.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app reads creation dates from your selected photos and videos to organize them into concerts.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app uses speech recognition to transcribe spoken audio from your videos so it can identify concert details.</string>
 </dict>
 </plist>

@@ -31,13 +31,6 @@ struct ResultsView: View {
     @ViewBuilder
     private func content(_ viewModel: ResultsViewModel) -> some View {
         List {
-            if let setlist = viewModel.record.selectedSetlist, let attribution = setlist.attributionURL {
-                Section {
-                    Link("Setlist data attribution", destination: attribution)
-                        .font(.caption)
-                }
-            }
-
             if let error = viewModel.errorMessage {
                 Section {
                     Label(error, systemImage: "exclamationmark.triangle")
@@ -45,18 +38,32 @@ struct ResultsView: View {
                 }
             }
 
-            ForEach(viewModel.record.videos) { video in
-                Section {
-                    VideoResultCard(video: video) { segment in
-                        viewModel.selectedCorrection = SegmentCorrectionSelection(videoID: video.id, segment: segment)
+            if viewModel.record.clusters.count > 1 {
+                // Multi-concert batch: group results by concert cluster.
+                ForEach(viewModel.record.clusters) { cluster in
+                    clusterSection(cluster, viewModel: viewModel)
+                }
+            } else {
+                if let setlist = viewModel.record.selectedSetlist, let attribution = setlist.attributionURL {
+                    Section {
+                        Link("Setlist data attribution", destination: attribution)
+                            .font(.caption)
                     }
                 }
-            }
 
-            if !viewModel.record.photos.isEmpty {
-                Section("Photos") {
-                    ForEach(viewModel.record.photos) { photo in
-                        PhotoResultCard(photo: photo)
+                ForEach(viewModel.record.videos) { video in
+                    Section {
+                        VideoResultCard(video: video) { segment in
+                            viewModel.selectedCorrection = SegmentCorrectionSelection(videoID: video.id, segment: segment)
+                        }
+                    }
+                }
+
+                if !viewModel.record.photos.isEmpty {
+                    Section("Photos") {
+                        ForEach(viewModel.record.photos) { photo in
+                            PhotoResultCard(photo: photo)
+                        }
                     }
                 }
             }
@@ -79,6 +86,40 @@ struct ResultsView: View {
                 viewModel.selectedCorrection = nil
             }
         }
+    }
+
+    @ViewBuilder
+    private func clusterSection(_ cluster: ConcertClusterAssignment, viewModel: ResultsViewModel) -> some View {
+        let videoIDs = Set(cluster.videoIDs)
+        let photoIDs = Set(cluster.photoIDs)
+        let clusterVideos = viewModel.record.videos.filter { videoIDs.contains($0.id) }
+        let clusterPhotos = viewModel.record.photos.filter { photoIDs.contains($0.id) }
+
+        Section(clusterHeader(cluster)) {
+            if let attribution = cluster.selectedSetlist?.attributionURL {
+                Link("Setlist data attribution", destination: attribution)
+                    .font(.caption)
+            }
+            ForEach(clusterVideos) { video in
+                VideoResultCard(video: video) { segment in
+                    viewModel.selectedCorrection = SegmentCorrectionSelection(videoID: video.id, segment: segment)
+                }
+            }
+            ForEach(clusterPhotos) { photo in
+                PhotoResultCard(photo: photo)
+            }
+        }
+    }
+
+    private func clusterHeader(_ cluster: ConcertClusterAssignment) -> String {
+        var title = cluster.displayTitle
+        if let venue = cluster.selectedSetlist?.venueName ?? cluster.selectedConcert?.venueName {
+            title += " — \(venue)"
+        }
+        if cluster.selectedSetlist == nil && cluster.selectedConcert == nil && !cluster.isUndated {
+            title += " (unidentified)"
+        }
+        return title
     }
 }
 

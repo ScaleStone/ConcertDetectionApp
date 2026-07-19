@@ -10,6 +10,11 @@ public struct AnalysisRecord: Identifiable, Codable, Hashable {
     public var selectedSetlist: ConcertSetlist?
     public var rawMatchesByVideoID: [UUID: [RawRecognitionMatch]]
     public var currentStage: RecognitionStage
+    /// Concert clusters found by timestamp grouping. Empty for legacy
+    /// records and for batches analyzed before clustering ran.
+    public var clusters: [ConcertClusterAssignment]
+    /// Label used when this record's concert could not be identified.
+    public var fallbackTitle: String?
 
     public init(
         id: UUID = UUID(),
@@ -20,7 +25,9 @@ public struct AnalysisRecord: Identifiable, Codable, Hashable {
         selectedConcert: ConcertCandidate? = nil,
         selectedSetlist: ConcertSetlist? = nil,
         rawMatchesByVideoID: [UUID: [RawRecognitionMatch]] = [:],
-        currentStage: RecognitionStage = .idle
+        currentStage: RecognitionStage = .idle,
+        clusters: [ConcertClusterAssignment] = [],
+        fallbackTitle: String? = nil
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -31,6 +38,8 @@ public struct AnalysisRecord: Identifiable, Codable, Hashable {
         self.selectedSetlist = selectedSetlist
         self.rawMatchesByVideoID = rawMatchesByVideoID
         self.currentStage = currentStage
+        self.clusters = clusters
+        self.fallbackTitle = fallbackTitle
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -43,6 +52,8 @@ public struct AnalysisRecord: Identifiable, Codable, Hashable {
         case selectedSetlist
         case rawMatchesByVideoID
         case currentStage
+        case clusters
+        case fallbackTitle
     }
 
     public init(from decoder: Decoder) throws {
@@ -56,6 +67,51 @@ public struct AnalysisRecord: Identifiable, Codable, Hashable {
         self.selectedSetlist = try container.decodeIfPresent(ConcertSetlist.self, forKey: .selectedSetlist)
         self.rawMatchesByVideoID = try container.decodeIfPresent([UUID: [RawRecognitionMatch]].self, forKey: .rawMatchesByVideoID) ?? [:]
         self.currentStage = try container.decode(RecognitionStage.self, forKey: .currentStage)
+        self.clusters = try container.decodeIfPresent([ConcertClusterAssignment].self, forKey: .clusters) ?? []
+        self.fallbackTitle = try container.decodeIfPresent(String.self, forKey: .fallbackTitle)
+    }
+
+    /// Splits this record into one sub-record per concert cluster.
+    ///
+    /// Each sub-record uses its cluster's id, media subset, per-cluster
+    /// concert/setlist selection, and fallback title, so each cluster can be
+    /// persisted as its own concert. Records without clusters (legacy or
+    /// single-concert flow) return `[self]`, preserving existing behavior.
+    public func perClusterAnalysisRecords() -> [AnalysisRecord] {
+        // No clusters: legacy record, keep as-is.
+        guard !clusters.isEmpty else { return [self] }
+
+        // Single cluster: keep this record's identity (so history, results,
+        // and library matching behave exactly as before clustering existed),
+        // folding in the cluster's concert selection.
+        if clusters.count == 1 {
+            var single = self
+            single.selectedConcert = selectedConcert ?? clusters[0].selectedConcert
+            single.selectedSetlist = selectedSetlist ?? clusters[0].selectedSetlist
+            single.fallbackTitle = fallbackTitle ?? (clusters[0].fallbackLabel.isEmpty ? nil : clusters[0].fallbackLabel)
+            return [single]
+        }
+
+        return clusters.map { cluster in
+            let videoIDSet = Set(cluster.videoIDs)
+            let photoIDSet = Set(cluster.photoIDs)
+            let clusterVideos = videos.filter { videoIDSet.contains($0.id) }
+            let clusterPhotos = photos.filter { photoIDSet.contains($0.id) }
+            let clusterMatches = rawMatchesByVideoID.filter { videoIDSet.contains($0.key) }
+            return AnalysisRecord(
+                id: cluster.id,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                videos: clusterVideos,
+                photos: clusterPhotos,
+                selectedConcert: cluster.selectedConcert,
+                selectedSetlist: cluster.selectedSetlist,
+                rawMatchesByVideoID: clusterMatches,
+                currentStage: currentStage,
+                clusters: [],
+                fallbackTitle: cluster.fallbackLabel.isEmpty ? nil : cluster.fallbackLabel
+            )
+        }
     }
 }
 

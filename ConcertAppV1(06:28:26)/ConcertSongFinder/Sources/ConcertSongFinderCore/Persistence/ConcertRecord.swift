@@ -15,6 +15,8 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
     public var photos: [ConcertPhoto]
     public var rawMatchesByVideoID: [UUID: [RawRecognitionMatch]]
     public var currentStage: RecognitionStage
+    /// Label used when no concert/setlist was identified (e.g. "Artist — date").
+    public var fallbackTitle: String?
 
     public init(
         id: UUID = UUID(),
@@ -25,7 +27,8 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
         videos: [ConcertVideo] = [],
         photos: [ConcertPhoto] = [],
         rawMatchesByVideoID: [UUID: [RawRecognitionMatch]] = [:],
-        currentStage: RecognitionStage = .idle
+        currentStage: RecognitionStage = .idle,
+        fallbackTitle: String? = nil
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -36,6 +39,7 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
         self.photos = photos
         self.rawMatchesByVideoID = rawMatchesByVideoID
         self.currentStage = currentStage
+        self.fallbackTitle = fallbackTitle
     }
 
     public init(analysisRecord: AnalysisRecord) {
@@ -48,18 +52,24 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
         self.photos = analysisRecord.photos
         self.rawMatchesByVideoID = analysisRecord.rawMatchesByVideoID
         self.currentStage = analysisRecord.currentStage
+        self.fallbackTitle = analysisRecord.fallbackTitle
     }
 
     public var displayTitle: String {
         selectedSetlist?.artistName
             ?? selectedConcert?.artistName
+            ?? fallbackTitle
             ?? "Untitled Concert"
     }
 
     public var displaySubtitle: String {
         var parts: [String] = []
-        if let date = concertDate {
-            parts.append(Self.dateFormatter.string(from: date))
+        if let eventDate = selectedSetlist?.eventDate ?? selectedConcert?.eventDate {
+            // Backend event dates are calendar dates encoded as UTC midnight;
+            // format them in UTC so they never shift a day in local time.
+            parts.append(Self.utcDateFormatter.string(from: eventDate))
+        } else if let mediaDate = (videos.compactMap(\.createdAt) + photos.compactMap(\.createdAt)).min() {
+            parts.append(Self.dateFormatter.string(from: mediaDate))
         }
         if let venue = selectedSetlist?.venueName ?? selectedConcert?.venueName {
             parts.append(venue)
@@ -76,19 +86,51 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
     public func matches(analysisRecord: AnalysisRecord, calendar: Calendar = .current) -> Bool {
         guard let incomingArtist = Self.normalizedArtist(analysisRecord.selectedSetlist?.artistName ?? analysisRecord.selectedConcert?.artistName),
               let existingArtist = Self.normalizedArtist(selectedSetlist?.artistName ?? selectedConcert?.artistName),
-              incomingArtist == existingArtist,
-              let incomingDate = analysisRecord.selectedSetlist?.eventDate ?? analysisRecord.selectedConcert?.eventDate ?? analysisRecord.videos.compactMap(\.createdAt).min() ?? analysisRecord.photos.compactMap(\.createdAt).min(),
-              let existingDate = concertDate else {
+              incomingArtist == existingArtist else {
             return false
         }
-        return calendar.isDate(incomingDate, inSameDayAs: existingDate)
+
+        let incomingEventDate = analysisRecord.selectedSetlist?.eventDate ?? analysisRecord.selectedConcert?.eventDate
+        let incomingMediaDate = analysisRecord.videos.compactMap(\.createdAt).min() ?? analysisRecord.photos.compactMap(\.createdAt).min()
+        guard let incomingDay = Self.calendarDay(eventDate: incomingEventDate, mediaDate: incomingMediaDate, localCalendar: calendar) else {
+            return false
+        }
+
+        let existingEventDate = selectedSetlist?.eventDate ?? selectedConcert?.eventDate
+        let existingMediaDate = (videos.compactMap(\.createdAt) + photos.compactMap(\.createdAt)).min()
+        guard let existingDay = Self.calendarDay(eventDate: existingEventDate, mediaDate: existingMediaDate, localCalendar: calendar) else {
+            return false
+        }
+
+        return incomingDay == existingDay
     }
+
+    /// Event dates from the backend are calendar dates stored as UTC midnight
+    /// and must be read with a UTC calendar; media timestamps are real
+    /// instants and use the local calendar. Comparing the resulting
+    /// day components pairs the two correctly without off-by-one-day drift.
+    private static func calendarDay(eventDate: Date?, mediaDate: Date?, localCalendar: Calendar) -> DateComponents? {
+        if let eventDate {
+            return utcCalendar.dateComponents([.year, .month, .day], from: eventDate)
+        }
+        if let mediaDate {
+            return localCalendar.dateComponents([.year, .month, .day], from: mediaDate)
+        }
+        return nil
+    }
+
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        return calendar
+    }()
 
     public func merged(with analysisRecord: AnalysisRecord) -> ConcertRecord {
         var merged = self
         merged.updatedAt = Date()
         merged.selectedConcert = selectedConcert ?? analysisRecord.selectedConcert
         merged.selectedSetlist = selectedSetlist ?? analysisRecord.selectedSetlist
+        merged.fallbackTitle = fallbackTitle ?? analysisRecord.fallbackTitle
         merged.currentStage = analysisRecord.currentStage
         merged.videos = Self.mergedVideos(existing: videos, incoming: analysisRecord.videos)
         merged.photos = Self.mergedPhotos(existing: photos, incoming: analysisRecord.photos)
@@ -124,8 +166,14 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
         var result = existing
         var seenKeys = Set(result.map(videoIdentityKey))
         for video in incoming {
+            // Same video re-analyzed or corrected: take the newer copy so
+            // updated segments and statuses propagate into the library.
+            if let existingIndex = result.firstIndex(where: { $0.id == video.id }) {
+                result[existingIndex] = video
+                continue
+            }
             let key = videoIdentityKey(video)
-            guard !result.contains(where: { $0.id == video.id }) && seenKeys.insert(key).inserted else {
+            guard seenKeys.insert(key).inserted else {
                 ConcertLibraryLog.persistence.info("Skipped duplicate video while merging concert media video=\(video.id.uuidString, privacy: .public) file=\(video.fileName, privacy: .public) key=\(key, privacy: .public)")
                 continue
             }
@@ -149,8 +197,13 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
         var result = existing
         var seenKeys = Set(result.map(photoIdentityKey))
         for photo in incoming {
+            // Same photo re-classified or corrected: take the newer copy.
+            if let existingIndex = result.firstIndex(where: { $0.id == photo.id }) {
+                result[existingIndex] = photo
+                continue
+            }
             let key = photoIdentityKey(photo)
-            guard !result.contains(where: { $0.id == photo.id }) && seenKeys.insert(key).inserted else {
+            guard seenKeys.insert(key).inserted else {
                 ConcertLibraryLog.persistence.info("Skipped duplicate photo while merging concert media photo=\(photo.id.uuidString, privacy: .public) file=\(photo.fileName, privacy: .public) key=\(key, privacy: .public)")
                 continue
             }
@@ -211,6 +264,14 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
+        return formatter
+    }()
+
+    private static let utcDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         return formatter
     }()
 }

@@ -44,7 +44,7 @@ final class AppEnvironment: ObservableObject {
     static func live() -> AppEnvironment {
         let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ConcertSongFinder", isDirectory: true)
-        let backend = BackendAPIClient(baseURL: backendBaseURL)
+        let backend = BackendAPIClient(baseURL: backendBaseURL, apiKey: backendAPIKey)
         return AppEnvironment(
             videoImportService: LiveVideoImportService(workingDirectory: supportDirectory.appendingPathComponent("Videos", isDirectory: true)),
             audioExtractionService: LiveAudioExtractionService(temporaryDirectory: FileManager.default.temporaryDirectory),
@@ -60,7 +60,7 @@ final class AppEnvironment: ObservableObject {
         )
     }
 
-    private static var backendBaseURL: URL {
+    private static var backendBaseURL: URL? {
         if let configuredValue = Bundle.main.object(forInfoDictionaryKey: "CSFBackendBaseURL") as? String {
             let trimmedValue = configuredValue.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmedValue.isEmpty, let configuredURL = URL(string: trimmedValue) {
@@ -69,9 +69,20 @@ final class AppEnvironment: ObservableObject {
         }
 
         #if targetEnvironment(simulator)
-        return URL(string: "http://127.0.0.1:8000")!
+        // The simulator shares the Mac's network stack, so localhost works.
+        return URL(string: "http://127.0.0.1:8000")
         #else
-        return URL(string: "http://192.168.11.28:8000")!
+        // On a physical device the backend URL must be configured explicitly;
+        // requests will surface a clear "backend not configured" error.
+        return nil
         #endif
+    }
+
+    private static var backendAPIKey: String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "CSFBackendAPIKey") as? String else {
+            return nil
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
