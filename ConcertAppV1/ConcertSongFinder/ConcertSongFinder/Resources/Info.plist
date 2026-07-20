@@ -21,7 +21,7 @@
 	<key>CSFBackendAPIKey</key>
 	<string>-XoOTG1JM5fdy_n_y3jXATofsjrL4NH2paUUwhNiktI</string>
 	<key>CSFBackendBaseURL</key>
-	<string></string>
+	<string>https://concertsongfinder-backend.onrender.com</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

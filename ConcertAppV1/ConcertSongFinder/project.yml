@@ -24,7 +24,7 @@ targets:
     info:
       path: ConcertSongFinder/Resources/Info.plist
       properties:
-        CSFBackendBaseURL: ""
+        CSFBackendBaseURL: "https://concertsongfinder-backend.onrender.com"
         CSFBackendAPIKey: "-XoOTG1JM5fdy_n_y3jXATofsjrL4NH2paUUwhNiktI"
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
