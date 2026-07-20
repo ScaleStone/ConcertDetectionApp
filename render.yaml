@@ -4,7 +4,7 @@ services:
   - type: web
     name: concertsongfinder-backend
     runtime: docker
-    rootDir: "ConcertAppV1(06:28:26)/ConcertSongFinder/backend"
+    rootDir: ConcertAppV1/ConcertSongFinder/backend
     dockerfilePath: ./Dockerfile
     plan: free
     healthCheckPath: /health
