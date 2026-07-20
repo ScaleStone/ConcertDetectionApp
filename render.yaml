@@ -1,0 +1,22 @@
+# Render blueprint: deploys the ConcertSongFinder backend as a web service.
+# Connect this repo at https://dashboard.render.com → New → Blueprint.
+services:
+  - type: web
+    name: concertsongfinder-backend
+    runtime: docker
+    rootDir: "ConcertAppV1(06:28:26)/ConcertSongFinder/backend"
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Secrets: Render prompts for these values on first deploy;
+      # they are never stored in the repo.
+      - key: SETLIST_FM_API_KEY
+        sync: false
+      - key: BACKEND_API_KEY
+        sync: false
+      - key: CACHE_TTL_SECONDS
+        value: "900"
+      - key: ALLOWED_ORIGINS
+        value: "http://localhost:3000"
