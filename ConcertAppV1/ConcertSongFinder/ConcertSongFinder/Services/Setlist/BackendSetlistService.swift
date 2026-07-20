@@ -35,14 +35,15 @@ final class BackendSetlistService: SetlistService {
         let latitudeDescription = request.latitude.map { String($0) } ?? "nil"
         let longitudeDescription = request.longitude.map { String($0) } ?? "nil"
         AppLog.network.info("Setlist search request artist=\(artist ?? "nil", privacy: .public) date=\(request.date ?? "nil", privacy: .public) lat=\(latitudeDescription, privacy: .public) lon=\(longitudeDescription, privacy: .public) city=\(cityName ?? "nil", privacy: .public) state=\(stateCode ?? "nil", privacy: .public) country=\(countryCode ?? "nil", privacy: .public)")
-        AppLog.network.info("Checking backend health before setlist search.")
-        try await client.checkHealth()
-        AppLog.network.info("Backend health check succeeded; continuing setlist search.")
-        return try await client.post("api/concerts/search", body: request, responseType: [ConcertCandidate].self, timeout: 20)
+        // No pre-flight health check: the cloud backend's free tier sleeps
+        // when idle and takes ~30s to wake, so a short health probe would
+        // wrongly skip identification. The generous request timeout below
+        // rides out the cold start instead.
+        return try await client.post("api/concerts/search", body: request, responseType: [ConcertCandidate].self, timeout: 90)
     }
 
     func fetchSetlist(id: String) async throws -> ConcertSetlist {
         AppLog.network.info("Fetching setlist id=\(id, privacy: .public)")
-        return try await client.get("api/setlists/\(id)", responseType: ConcertSetlist.self, timeout: 20)
+        return try await client.get("api/setlists/\(id)", responseType: ConcertSetlist.self, timeout: 60)
     }
 }
