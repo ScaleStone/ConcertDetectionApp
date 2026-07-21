@@ -8,17 +8,17 @@ struct RootView: View {
     var body: some View {
         TabView {
             NavigationStack {
-                uploadFlow
-            }
-            .tabItem {
-                Label("Upload", systemImage: "square.and.arrow.up")
-            }
-
-            NavigationStack {
                 MyConcertsView()
             }
             .tabItem {
                 Label("My Concerts", systemImage: "music.mic")
+            }
+
+            NavigationStack {
+                uploadFlow
+            }
+            .tabItem {
+                Label("Upload", systemImage: "square.and.arrow.up")
             }
         }
     }
