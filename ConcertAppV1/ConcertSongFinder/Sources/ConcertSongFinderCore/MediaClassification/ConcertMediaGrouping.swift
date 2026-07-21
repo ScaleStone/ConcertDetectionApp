@@ -44,6 +44,126 @@ public enum ConcertMediaGrouping {
         public let earliestDate: Date?
     }
 
+    /// A single entry in a concert's media library grid: one media item
+    /// (or one video+song pairing) labeled with its song.
+    public struct MediaLibraryItem: Identifiable, Hashable {
+        public enum Media: Hashable {
+            case video(ConcertVideo, segment: SongSegment?)
+            case photo(ConcertPhoto)
+        }
+
+        public let id: String
+        public let media: Media
+        /// nil when the media has no reliable song identification.
+        public let songTitle: String?
+        public let songArtist: String?
+        public let capturedAt: Date?
+
+        public var displayLabel: String {
+            songTitle ?? "Unknown"
+        }
+    }
+
+    /// Flattens a concert's media into library items labeled by song.
+    ///
+    /// Videos produce one item per distinct reliably-identified song (a
+    /// multi-song video appears once per song, so searching either song
+    /// finds it); videos with no reliable identification appear once as
+    /// "Unknown". Song names prefer the setlist's clean title when the
+    /// recognized candidate matches an occurrence. Items sort by capture
+    /// time, undated media last.
+    public static func libraryItems(
+        videos: [ConcertVideo],
+        photos: [ConcertPhoto],
+        setlist: ConcertSetlist?
+    ) -> [MediaLibraryItem] {
+        let occurrences = setlist?.occurrences ?? []
+
+        func cleanSong(for candidate: SongCandidate) -> (title: String, artist: String) {
+            if let occurrence = occurrences.first(where: { candidateMatches(candidate, occurrence: $0) }) {
+                return (occurrence.title, occurrence.artist)
+            }
+            return (candidate.song.title, candidate.song.artist)
+        }
+
+        func songKey(title: String, artist: String) -> String {
+            "\(TextNormalizer.normalizeText(artist))|\(TextNormalizer.comparableSongTitle(title))"
+        }
+
+        var items: [MediaLibraryItem] = []
+
+        for video in videos {
+            var seenSongKeys = Set<String>()
+            var videoItems: [MediaLibraryItem] = []
+            for segment in video.segments {
+                guard reliableStatuses.contains(segment.status),
+                      let candidate = segment.primaryCandidate else { continue }
+                let song = cleanSong(for: candidate)
+                guard seenSongKeys.insert(songKey(title: song.title, artist: song.artist)).inserted else { continue }
+                videoItems.append(
+                    MediaLibraryItem(
+                        id: "video-\(video.id.uuidString)-\(segment.id.uuidString)",
+                        media: .video(video, segment: segment),
+                        songTitle: song.title,
+                        songArtist: song.artist,
+                        capturedAt: video.createdAt
+                    )
+                )
+            }
+            if videoItems.isEmpty {
+                items.append(
+                    MediaLibraryItem(
+                        id: "video-\(video.id.uuidString)",
+                        media: .video(video, segment: nil),
+                        songTitle: nil,
+                        songArtist: nil,
+                        capturedAt: video.createdAt
+                    )
+                )
+            } else {
+                items.append(contentsOf: videoItems)
+            }
+        }
+
+        for photo in photos {
+            if let candidate = photo.primaryCandidate {
+                let song = cleanSong(for: candidate)
+                items.append(
+                    MediaLibraryItem(
+                        id: "photo-\(photo.id.uuidString)",
+                        media: .photo(photo),
+                        songTitle: song.title,
+                        songArtist: song.artist,
+                        capturedAt: photo.createdAt
+                    )
+                )
+            } else {
+                items.append(
+                    MediaLibraryItem(
+                        id: "photo-\(photo.id.uuidString)",
+                        media: .photo(photo),
+                        songTitle: nil,
+                        songArtist: nil,
+                        capturedAt: photo.createdAt
+                    )
+                )
+            }
+        }
+
+        return items.sorted {
+            switch ($0.capturedAt, $1.capturedAt) {
+            case let (.some(left), .some(right)) where left != right:
+                return left < right
+            case (.some, .none):
+                return true
+            case (.none, .some):
+                return false
+            default:
+                return $0.displayLabel < $1.displayLabel
+            }
+        }
+    }
+
     /// Builds groups for reliably recognized songs that do NOT match any
     /// setlist occurrence. With no setlist, every reliably recognized song
     /// gets a group, so recognition results remain browsable even when
