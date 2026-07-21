@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		023A8DDAB768716523AC0FF6 /* ConcertSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D126B50F9F6B0842C202E370 /* ConcertSetupView.swift */; };
 		05AED4541E82FFC393DEF5AE /* ClusteringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C6A38799A84B623529CA0E /* ClusteringTests.swift */; };
 		0662A03F60F6BC0291AF2E39 /* SetlistAlignmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF346E418712C0EAE887528 /* SetlistAlignmentTests.swift */; };
 		1016D4E64D3B1E20FF33AA3E /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057D89D0505F40DE1F93684E /* AppEnvironment.swift */; };
@@ -18,8 +17,8 @@
 		30DCFC3BEAD86927B0E8A17A /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 965FADCF109661CE295A4141 /* HomeViewModel.swift */; };
 		36D71F7FC869204240B4EECA /* SegmentCorrectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E367FD10E0D626B8A7D13A5 /* SegmentCorrectionView.swift */; };
 		4E7DAD43362CA63FEC0547B9 /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB1CD66A23740A8429AC690 /* AnalysisView.swift */; };
-		59B99DEF4E7D540750B4D55C /* ConcertAssignmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E679B925EDB1655D4339EE3E /* ConcertAssignmentView.swift */; };
 		5F355B2EBE165EBB268095F2 /* AnalysisViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9CAC793A5A8D54993334C2F /* AnalysisViewModel.swift */; };
+		62C66083D5EBFBE8FC0322C6 /* ConcertMatchingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF980939B3523DA0806CA23 /* ConcertMatchingTests.swift */; };
 		74855E95B674C0E250917214 /* ConcertSongFinderCore in Frameworks */ = {isa = PBXBuildFile; productRef = 123E8B233F6EC5399C2378C6 /* ConcertSongFinderCore */; };
 		7B6F567AD06E51AF5BDDE1B1 /* ConcertLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACB993BEE02A561CD8F0BF /* ConcertLibraryTests.swift */; };
 		81695C97158DAE038CE69F68 /* ConcertMediaGroupingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489B19FBCFE3326C54BF096 /* ConcertMediaGroupingTests.swift */; };
@@ -30,7 +29,6 @@
 		A2481F4F5FC35F525AAB794A /* BackendAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 610AB0FF0D499D4F48A4466D /* BackendAPIClient.swift */; };
 		A2FE69C7F9DBEFE58B0FE479 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139083F9D3065EE98CC4EE87 /* Logger.swift */; };
 		ABDBA123ED95E5103385B25B /* VideoImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D4EF99C747D62272C90B20 /* VideoImportService.swift */; };
-		AE4DF0AE17487309F35A94CD /* ConcertSetupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22A09B9DD736930F7B25F82 /* ConcertSetupViewModel.swift */; };
 		BA1BDF0B132146B52226418C /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1073E12A7B672B1CCBA460BC /* HomeView.swift */; };
 		C28E21B39EF02302320364B3 /* TimelineBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46CCE1BF7218265594EDE1C /* TimelineBuilderTests.swift */; };
 		C3FC19769DE51A8F7BEF312A /* ShareMediaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B83D342C568E082561D4C08 /* ShareMediaSheet.swift */; };
@@ -79,14 +77,12 @@
 		AA3B0C5830FA55C7439037F2 /* MediaClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaClassificationTests.swift; sourceTree = "<group>"; };
 		ABF346E418712C0EAE887528 /* SetlistAlignmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetlistAlignmentTests.swift; sourceTree = "<group>"; };
 		B9D4EF99C747D62272C90B20 /* VideoImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoImportService.swift; sourceTree = "<group>"; };
-		C22A09B9DD736930F7B25F82 /* ConcertSetupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcertSetupViewModel.swift; sourceTree = "<group>"; };
 		C8A61210C64A7DC2DF44EB3B /* MediaShareService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaShareService.swift; sourceTree = "<group>"; };
 		C9CAC793A5A8D54993334C2F /* AnalysisViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisViewModel.swift; sourceTree = "<group>"; };
-		D126B50F9F6B0842C202E370 /* ConcertSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcertSetupView.swift; sourceTree = "<group>"; };
 		D46CCE1BF7218265594EDE1C /* TimelineBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBuilderTests.swift; sourceTree = "<group>"; };
 		D7DF3B9495213A35A00E42A5 /* ComparableTitleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparableTitleTests.swift; sourceTree = "<group>"; };
+		DBF980939B3523DA0806CA23 /* ConcertMatchingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcertMatchingTests.swift; sourceTree = "<group>"; };
 		E0C4289AE67EA81C93B61B5F /* ShazamMusicRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShazamMusicRecognitionService.swift; sourceTree = "<group>"; };
-		E679B925EDB1655D4339EE3E /* ConcertAssignmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcertAssignmentView.swift; sourceTree = "<group>"; };
 		E93DFA3DDB57D8038C3082FE /* BackendLyricsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendLyricsService.swift; sourceTree = "<group>"; };
 		EE52659DD70CC5A0C4313330 /* BackendDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendDTOs.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -175,6 +171,7 @@
 				36C6A38799A84B623529CA0E /* ClusteringTests.swift */,
 				D7DF3B9495213A35A00E42A5 /* ComparableTitleTests.swift */,
 				36ACB993BEE02A561CD8F0BF /* ConcertLibraryTests.swift */,
+				DBF980939B3523DA0806CA23 /* ConcertMatchingTests.swift */,
 				1489B19FBCFE3326C54BF096 /* ConcertMediaGroupingTests.swift */,
 				65EF461B25ACCE9BDCD9C360 /* LyricMatchingTests.swift */,
 				AA3B0C5830FA55C7439037F2 /* MediaClassificationTests.swift */,
@@ -198,7 +195,6 @@
 		73DE1BC475D991022E8BACB1 /* ConcertLibrary */ = {
 			isa = PBXGroup;
 			children = (
-				E679B925EDB1655D4339EE3E /* ConcertAssignmentView.swift */,
 				94B74834196CFAD1C2F97775 /* MyConcertsView.swift */,
 			);
 			path = ConcertLibrary;
@@ -227,15 +223,6 @@
 				E93DFA3DDB57D8038C3082FE /* BackendLyricsService.swift */,
 			);
 			path = Lyrics;
-			sourceTree = "<group>";
-		};
-		8F1D2C86434D26A91D5CF1D9 /* ConcertSetup */ = {
-			isa = PBXGroup;
-			children = (
-				D126B50F9F6B0842C202E370 /* ConcertSetupView.swift */,
-				C22A09B9DD736930F7B25F82 /* ConcertSetupViewModel.swift */,
-			);
-			path = ConcertSetup;
 			sourceTree = "<group>";
 		};
 		9206B0BE0FF62E83A0229690 /* Packages */ = {
@@ -288,7 +275,6 @@
 			children = (
 				775B0A4E24627F9B83E38D0D /* Analysis */,
 				73DE1BC475D991022E8BACB1 /* ConcertLibrary */,
-				8F1D2C86434D26A91D5CF1D9 /* ConcertSetup */,
 				A51F83DCE0D5D0845AA89379 /* Home */,
 				1BBE9DD94AD6C48E2D7C404E /* Results */,
 				C67C78B7FB07006B5625C090 /* Share */,
@@ -429,6 +415,7 @@
 				05AED4541E82FFC393DEF5AE /* ClusteringTests.swift in Sources */,
 				28F5037747B740204A362630 /* ComparableTitleTests.swift in Sources */,
 				7B6F567AD06E51AF5BDDE1B1 /* ConcertLibraryTests.swift in Sources */,
+				62C66083D5EBFBE8FC0322C6 /* ConcertMatchingTests.swift in Sources */,
 				81695C97158DAE038CE69F68 /* ConcertMediaGroupingTests.swift in Sources */,
 				8C23A6F8E09AAEEDEF356167 /* LyricMatchingTests.swift in Sources */,
 				E0DDFD3CF41D83868A36E70A /* MediaClassificationTests.swift in Sources */,
@@ -450,9 +437,6 @@
 				E1A40A9F1E3D183B5758E90A /* BackendDTOs.swift in Sources */,
 				9988A6555255DC8258F3EDF6 /* BackendLyricsService.swift in Sources */,
 				EEDEB9B45024AAE4A04B99F8 /* BackendSetlistService.swift in Sources */,
-				59B99DEF4E7D540750B4D55C /* ConcertAssignmentView.swift in Sources */,
-				023A8DDAB768716523AC0FF6 /* ConcertSetupView.swift in Sources */,
-				AE4DF0AE17487309F35A94CD /* ConcertSetupViewModel.swift in Sources */,
 				DBD3E3DAA7352B749AB8F2B9 /* ConcertSongFinderApp.swift in Sources */,
 				D417C7DBC9BBFC246F2B1081 /* Formatting.swift in Sources */,
 				BA1BDF0B132146B52226418C /* HomeView.swift in Sources */,

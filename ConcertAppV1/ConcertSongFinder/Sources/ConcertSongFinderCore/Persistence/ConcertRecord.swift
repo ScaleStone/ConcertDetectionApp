@@ -105,6 +105,80 @@ public struct ConcertRecord: Identifiable, Codable, Hashable {
         return incomingDay == existingDay
     }
 
+    /// Fully automatic concert assignment for a completed analysis
+    /// (sub-)record, tiered by confidence:
+    /// 1. Same record/cluster id (re-analysis) always wins.
+    /// 2. Identified uploads match an existing concert by artist + calendar
+    ///    day; failing that, they adopt an unidentified concert from the
+    ///    same evening (upgrading it with the identification).
+    /// 3. Unidentified uploads join whichever concert's media sits within
+    ///    the same-evening time window.
+    /// Returns nil when a new concert should be created.
+    public static func findMatch(
+        for analysisRecord: AnalysisRecord,
+        in concerts: [ConcertRecord],
+        gapThreshold: TimeInterval = ConcertClusterer.defaultGapThreshold
+    ) -> ConcertRecord? {
+        if let byID = concerts.first(where: { $0.id == analysisRecord.id }) {
+            return byID
+        }
+
+        let incomingArtist = normalizedArtist(analysisRecord.selectedSetlist?.artistName ?? analysisRecord.selectedConcert?.artistName)
+        if incomingArtist != nil {
+            if let artistAndDay = concerts.first(where: { $0.matches(analysisRecord: analysisRecord) }) {
+                return artistAndDay
+            }
+            // Same evening, previously unidentified concert: claim it so the
+            // identification upgrades the existing entry instead of creating
+            // a duplicate.
+            return concerts.first { concert in
+                normalizedArtist(concert.selectedSetlist?.artistName ?? concert.selectedConcert?.artistName) == nil
+                    && isWithinSameEvening(concert, analysisRecord: analysisRecord, gapThreshold: gapThreshold)
+            }
+        }
+
+        // Unidentified upload: assign purely by timestamp proximity.
+        return concerts.first { isWithinSameEvening($0, analysisRecord: analysisRecord, gapThreshold: gapThreshold) }
+    }
+
+    /// The time span covered by this concert's media (capture instants,
+    /// extended by video durations).
+    public var mediaTimeRange: ClosedRange<Date>? {
+        Self.mediaTimeRange(videos: videos, photos: photos)
+    }
+
+    private static func mediaTimeRange(videos: [ConcertVideo], photos: [ConcertPhoto]) -> ClosedRange<Date>? {
+        var dates: [Date] = []
+        for video in videos {
+            if let createdAt = video.createdAt {
+                dates.append(createdAt)
+                dates.append(createdAt.addingTimeInterval(max(video.duration, 0)))
+            }
+        }
+        for photo in photos {
+            if let createdAt = photo.createdAt {
+                dates.append(createdAt)
+            }
+        }
+        guard let earliest = dates.min(), let latest = dates.max() else { return nil }
+        return earliest...latest
+    }
+
+    private static func isWithinSameEvening(
+        _ concert: ConcertRecord,
+        analysisRecord: AnalysisRecord,
+        gapThreshold: TimeInterval
+    ) -> Bool {
+        guard let existingRange = concert.mediaTimeRange,
+              let incomingRange = mediaTimeRange(videos: analysisRecord.videos, photos: analysisRecord.photos) else {
+            return false
+        }
+        // Gap between the two ranges (negative when they overlap).
+        let gap = max(existingRange.lowerBound, incomingRange.lowerBound)
+            .timeIntervalSince(min(existingRange.upperBound, incomingRange.upperBound))
+        return gap <= gapThreshold
+    }
+
     /// Event dates from the backend are calendar dates stored as UTC midnight
     /// and must be read with a UTC calendar; media timestamps are real
     /// instants and use the local calendar. Comparing the resulting

@@ -59,8 +59,10 @@ final class ResultsViewModel: ObservableObject {
             let concerts = try environment.concertLibraryStore.loadConcerts()
             var deletedConcertIDs: Set<UUID> = []
             for subRecord in record.perClusterAnalysisRecords() {
-                let matchingConcert = concerts.first { $0.id == subRecord.id }
-                    ?? concerts.first { $0.matches(analysisRecord: subRecord) && !deletedConcertIDs.contains($0.id) }
+                let matchingConcert = ConcertRecord.findMatch(
+                    for: subRecord,
+                    in: concerts.filter { !deletedConcertIDs.contains($0.id) }
+                )
                 if let matchingConcert {
                     try environment.concertLibraryStore.deleteConcert(id: matchingConcert.id)
                     deletedConcertIDs.insert(matchingConcert.id)
@@ -149,8 +151,7 @@ final class ResultsViewModel: ObservableObject {
         do {
             let concerts = try environment.concertLibraryStore.loadConcerts()
             for subRecord in record.perClusterAnalysisRecords() {
-                guard let existing = concerts.first(where: { $0.id == subRecord.id })
-                    ?? concerts.first(where: { $0.matches(analysisRecord: subRecord) }) else {
+                guard let existing = ConcertRecord.findMatch(for: subRecord, in: concerts) else {
                     continue
                 }
                 let updated = existing.merged(with: subRecord)

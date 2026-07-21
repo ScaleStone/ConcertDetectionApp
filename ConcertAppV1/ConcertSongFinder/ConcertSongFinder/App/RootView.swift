@@ -28,25 +28,12 @@ struct RootView: View {
         switch uploadRoute {
         case .upload:
             HomeView { mediaImport in
+                // Analysis starts immediately after import; concert
+                // assignment is fully automatic (identification first,
+                // timestamp fallback otherwise) at persistence time.
                 let record = AnalysisRecord(videos: mediaImport.videos, photos: mediaImport.photos)
-                AppLog.importLog.info("RootView created upload analysis record=\(record.id.uuidString, privacy: .public) videos=\(mediaImport.videos.count, privacy: .public) photos=\(mediaImport.photos.count, privacy: .public)")
-                uploadRoute = .setup(record)
-            }
-        case .setup(let record):
-            ConcertSetupView(record: record) { updatedRecord in
-                AppLog.concertLibrary.info("RootView moving upload record to concert assignment record=\(updatedRecord.id.uuidString, privacy: .public) hasSetlist=\((updatedRecord.selectedSetlist != nil), privacy: .public)")
-                uploadRoute = .assign(updatedRecord)
-            } onCancel: {
-                AppLog.importLog.info("RootView upload setup cancelled record=\(record.id.uuidString, privacy: .public)")
-                uploadRoute = .upload
-            }
-        case .assign(let record):
-            ConcertAssignmentView(record: record) { combinedRecord in
-                AppLog.concertLibrary.info("RootView starting analysis for assigned concert record=\(combinedRecord.id.uuidString, privacy: .public) videos=\(combinedRecord.videos.count, privacy: .public) photos=\(combinedRecord.photos.count, privacy: .public)")
-                uploadRoute = .analysis(combinedRecord)
-            } onCancel: {
-                AppLog.concertLibrary.info("RootView concert assignment cancelled record=\(record.id.uuidString, privacy: .public)")
-                uploadRoute = .upload
+                AppLog.importLog.info("RootView starting automatic analysis record=\(record.id.uuidString, privacy: .public) videos=\(mediaImport.videos.count, privacy: .public) photos=\(mediaImport.photos.count, privacy: .public)")
+                uploadRoute = .analysis(record)
             }
         case .analysis(let record):
             AnalysisView(record: record) { completedRecord in
@@ -66,12 +53,12 @@ struct RootView: View {
 
     private func persistCompletedConcert(_ record: AnalysisRecord) {
         do {
-            // Multi-concert batches split into one concert per timestamp
-            // cluster; single-cluster/legacy records persist exactly as before.
+            // Fully automatic assignment: each timestamp cluster merges into
+            // an existing concert (by identity, artist+day, or same-evening
+            // timestamps) or becomes a new concert.
             let existingConcerts = try environment.concertLibraryStore.loadConcerts()
             for subRecord in record.perClusterAnalysisRecords() {
-                let existing = existingConcerts.first { $0.id == subRecord.id }
-                    ?? existingConcerts.first { $0.matches(analysisRecord: subRecord) }
+                let existing = ConcertRecord.findMatch(for: subRecord, in: existingConcerts)
                 let concert = existing?.merged(with: subRecord) ?? ConcertRecord.newConcert(from: subRecord)
                 try environment.concertLibraryStore.upsertConcert(concert)
                 AppLog.concertLibrary.info("RootView persisted concert=\(concert.id.uuidString, privacy: .public) record=\(record.id.uuidString, privacy: .public) title=\(concert.displayTitle, privacy: .public) videos=\(concert.videos.count, privacy: .public) photos=\(concert.photos.count, privacy: .public)")
@@ -84,8 +71,6 @@ struct RootView: View {
 
 private enum UploadRoute {
     case upload
-    case setup(AnalysisRecord)
-    case assign(AnalysisRecord)
     case analysis(AnalysisRecord)
     case results(AnalysisRecord)
 }
