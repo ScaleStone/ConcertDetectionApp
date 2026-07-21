@@ -1,6 +1,7 @@
 import AVFoundation
 import AVKit
 import ConcertSongFinderCore
+import ImageIO
 import SwiftUI
 import UIKit
 
@@ -214,25 +215,28 @@ private struct MediaLibraryCell: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ZStack(alignment: .bottomLeading) {
-                thumbnail
-                    .frame(minWidth: 0, maxWidth: .infinity)
-                    .aspectRatio(1, contentMode: .fill)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                if case .video(let video, let segment) = item.media {
-                    HStack(spacing: 3) {
-                        Image(systemName: "play.fill")
-                        Text(Formatting.duration(segment.map { $0.endTime - $0.startTime } ?? video.duration))
+            // Square tile: the clear container takes its size from the grid
+            // column, and the thumbnail is overlaid and clipped so image
+            // dimensions can never influence layout.
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .overlay(thumbnail)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(alignment: .bottomLeading) {
+                    if case .video(let video, let segment) = item.media {
+                        HStack(spacing: 3) {
+                            Image(systemName: "play.fill")
+                            Text(Formatting.duration(segment.map { $0.endTime - $0.startTime } ?? video.duration))
+                        }
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(.black.opacity(0.55), in: Capsule())
+                        .padding(6)
                     }
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(.black.opacity(0.55), in: Capsule())
-                    .padding(6)
                 }
-            }
+                .contentShape(RoundedRectangle(cornerRadius: 10))
 
             Text(item.displayLabel)
                 .font(.caption.weight(.medium))
@@ -348,11 +352,30 @@ private struct PhotoViewerSheet: View {
 
 private struct LibraryPhotoThumbnailView: View {
     let url: URL
+    @State private var image: UIImage?
     var body: some View {
         ZStack {
             Rectangle().fill(.thinMaterial)
-            if let image = UIImage(contentsOfFile: url.path) { Image(uiImage: image).resizable().scaledToFill() } else { Image(systemName: "photo").foregroundStyle(.secondary) }
+            if let image { Image(uiImage: image).resizable().scaledToFill() } else { Image(systemName: "photo").foregroundStyle(.secondary) }
         }
+        .task { image = await makeThumbnail() }
+    }
+
+    /// Downsampled via ImageIO so grid cells never decode full-resolution
+    /// photos into memory; the full-screen viewer still loads the original.
+    private func makeThumbnail() async -> UIImage? {
+        await Task.detached(priority: .utility) {
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 300
+            ]
+            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                  let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+                return nil
+            }
+            return UIImage(cgImage: cgImage)
+        }.value
     }
 }
 
