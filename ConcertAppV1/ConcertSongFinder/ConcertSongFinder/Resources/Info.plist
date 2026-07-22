@@ -22,6 +22,8 @@
 	<string>-XoOTG1JM5fdy_n_y3jXATofsjrL4NH2paUUwhNiktI</string>
 	<key>CSFBackendBaseURL</key>
 	<string>https://concertsongfinder-backend.onrender.com</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
@@ -35,5 +37,10 @@
 	<string>This app reads creation dates from your selected photos and videos to organize them into concerts.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>This app uses speech recognition to transcribe spoken audio from your videos so it can identify concert details.</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string></string>
+	</dict>
 </dict>
 </plist>
