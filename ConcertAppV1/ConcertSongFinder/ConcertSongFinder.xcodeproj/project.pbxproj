@@ -14,6 +14,8 @@
 		28F5037747B740204A362630 /* ComparableTitleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7DF3B9495213A35A00E42A5 /* ComparableTitleTests.swift */; };
 		2D85644C896DB592A3C51CBF /* ConcertSongFinderCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7C04FDE5D448D8FB3DD75620 /* ConcertSongFinderCore */; };
 		2E6E30233051229F95653D3D /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38B3FCFBBB98DE94A215C6DF /* RootView.swift */; };
+		30594D92CF864C1DAD13F4EC /* SuggestionCandidateBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B389385B385B3242A3CD43DD /* SuggestionCandidateBuilder.swift */; };
+		309FC5602CDB7365EF68A3AA /* PostIdeasSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E2F377A13BFDA272D0349F2 /* PostIdeasSection.swift */; };
 		30DCFC3BEAD86927B0E8A17A /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 965FADCF109661CE295A4141 /* HomeViewModel.swift */; };
 		36D71F7FC869204240B4EECA /* SegmentCorrectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E367FD10E0D626B8A7D13A5 /* SegmentCorrectionView.swift */; };
 		4389C8294E66E9A229325489 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AD27AD9C69EE14985C77019B /* PrivacyInfo.xcprivacy */; };
@@ -33,6 +35,7 @@
 		BA1BDF0B132146B52226418C /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1073E12A7B672B1CCBA460BC /* HomeView.swift */; };
 		C28E21B39EF02302320364B3 /* TimelineBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46CCE1BF7218265594EDE1C /* TimelineBuilderTests.swift */; };
 		C3FC19769DE51A8F7BEF312A /* ShareMediaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B83D342C568E082561D4C08 /* ShareMediaSheet.swift */; };
+		C8FA2EBA067D358819E326B2 /* SuggestionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF34B06CB157E9B0FE4B20E5 /* SuggestionService.swift */; };
 		CBFED2B38450F167D5BC0316 /* MediaShareService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8A61210C64A7DC2DF44EB3B /* MediaShareService.swift */; };
 		CCD2E5017F539E20FF218D2B /* ShazamMusicRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0C4289AE67EA81C93B61B5F /* ShazamMusicRecognitionService.swift */; };
 		CF65A1A77C1E615B4EB5DBF7 /* LiveAudioExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 248B5ED48EB003F6CB18AE6D /* LiveAudioExtractionService.swift */; };
@@ -59,6 +62,7 @@
 		1489B19FBCFE3326C54BF096 /* ConcertMediaGroupingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcertMediaGroupingTests.swift; sourceTree = "<group>"; };
 		248B5ED48EB003F6CB18AE6D /* LiveAudioExtractionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAudioExtractionService.swift; sourceTree = "<group>"; };
 		2C5CD312428774DC6D4E58DA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2E2F377A13BFDA272D0349F2 /* PostIdeasSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostIdeasSection.swift; sourceTree = "<group>"; };
 		36ACB993BEE02A561CD8F0BF /* ConcertLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcertLibraryTests.swift; sourceTree = "<group>"; };
 		36C6A38799A84B623529CA0E /* ClusteringTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClusteringTests.swift; sourceTree = "<group>"; };
 		38B3FCFBBB98DE94A215C6DF /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -79,7 +83,9 @@
 		AA3B0C5830FA55C7439037F2 /* MediaClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaClassificationTests.swift; sourceTree = "<group>"; };
 		ABF346E418712C0EAE887528 /* SetlistAlignmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetlistAlignmentTests.swift; sourceTree = "<group>"; };
 		AD27AD9C69EE14985C77019B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B389385B385B3242A3CD43DD /* SuggestionCandidateBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionCandidateBuilder.swift; sourceTree = "<group>"; };
 		B9D4EF99C747D62272C90B20 /* VideoImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoImportService.swift; sourceTree = "<group>"; };
+		BF34B06CB157E9B0FE4B20E5 /* SuggestionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionService.swift; sourceTree = "<group>"; };
 		C8A61210C64A7DC2DF44EB3B /* MediaShareService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaShareService.swift; sourceTree = "<group>"; };
 		C9CAC793A5A8D54993334C2F /* AnalysisViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisViewModel.swift; sourceTree = "<group>"; };
 		CD88266B4B952361ECBF8129 /* MediaLibraryItemsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaLibraryItemsTests.swift; sourceTree = "<group>"; };
@@ -149,6 +155,16 @@
 				EE52659DD70CC5A0C4313330 /* BackendDTOs.swift */,
 			);
 			path = Networking;
+			sourceTree = "<group>";
+		};
+		37D0BAA3868D9921E336648D /* PostIdeas */ = {
+			isa = PBXGroup;
+			children = (
+				2E2F377A13BFDA272D0349F2 /* PostIdeasSection.swift */,
+				B389385B385B3242A3CD43DD /* SuggestionCandidateBuilder.swift */,
+				BF34B06CB157E9B0FE4B20E5 /* SuggestionService.swift */,
+			);
+			path = PostIdeas;
 			sourceTree = "<group>";
 		};
 		3F0F4CB6919D43C196EDA536 /* VideoImport */ = {
@@ -281,6 +297,7 @@
 				775B0A4E24627F9B83E38D0D /* Analysis */,
 				73DE1BC475D991022E8BACB1 /* ConcertLibrary */,
 				A51F83DCE0D5D0845AA89379 /* Home */,
+				37D0BAA3868D9921E336648D /* PostIdeas */,
 				1BBE9DD94AD6C48E2D7C404E /* Results */,
 				C67C78B7FB07006B5625C090 /* Share */,
 			);
@@ -454,12 +471,15 @@
 				A2FE69C7F9DBEFE58B0FE479 /* Logger.swift in Sources */,
 				CBFED2B38450F167D5BC0316 /* MediaShareService.swift in Sources */,
 				87A5FD236E863FA7802BC3DB /* MyConcertsView.swift in Sources */,
+				309FC5602CDB7365EF68A3AA /* PostIdeasSection.swift in Sources */,
 				EE9DE798D9AF3F8946160522 /* ResultsView.swift in Sources */,
 				D7906C2B5D0178B19175BCBB /* ResultsViewModel.swift in Sources */,
 				2E6E30233051229F95653D3D /* RootView.swift in Sources */,
 				36D71F7FC869204240B4EECA /* SegmentCorrectionView.swift in Sources */,
 				C3FC19769DE51A8F7BEF312A /* ShareMediaSheet.swift in Sources */,
 				CCD2E5017F539E20FF218D2B /* ShazamMusicRecognitionService.swift in Sources */,
+				30594D92CF864C1DAD13F4EC /* SuggestionCandidateBuilder.swift in Sources */,
+				C8FA2EBA067D358819E326B2 /* SuggestionService.swift in Sources */,
 				ABDBA123ED95E5103385B25B /* VideoImportService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

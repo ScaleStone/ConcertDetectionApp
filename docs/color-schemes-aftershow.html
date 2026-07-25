@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aftershow Variations — Color Samples</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    background: #17181c; color: #eee; padding: 40px 24px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .intro { color: #9aa; font-size: 14px; margin-bottom: 32px; }
+  .schemes { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; }
+  .scheme { width: 290px; }
+  .scheme h2 { font-size: 16px; margin-bottom: 2px; }
+  .scheme .tagline { font-size: 12px; color: #99a; margin-bottom: 12px; min-height: 44px; }
+  .phone { border-radius: 34px; overflow: hidden; border: 6px solid #000; box-shadow: 0 18px 40px rgba(0,0,0,.55); }
+  .screen { padding: 18px 14px 0; min-height: 540px; display: flex; flex-direction: column; }
+  .navtitle { font-size: 19px; font-weight: 700; }
+  .subtitle { font-size: 11.5px; margin-top: 2px; }
+  .search { margin: 12px 0; padding: 8px 12px; border-radius: 10px; font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tile { border-radius: 10px; aspect-ratio: 1; position: relative; overflow: hidden; }
+  .tile .badge { position: absolute; bottom: 5px; left: 5px; font-size: 8.5px; font-weight: 600; color: #fff; background: rgba(0,0,0,.55); padding: 2px 6px; border-radius: 8px; }
+  .tilelabel { font-size: 9.5px; font-weight: 600; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cta { margin: 14px 0 10px; padding: 11px; border-radius: 12px; text-align: center; font-size: 13px; font-weight: 700; }
+  .pill { display: inline-block; font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; margin-right: 4px; }
+  .tabbar { margin-top: auto; display: flex; justify-content: space-around; padding: 10px 0 16px; font-size: 10.5px; font-weight: 600; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .tab .dot { width: 18px; height: 18px; border-radius: 5px; }
+  .swatches { display: flex; margin-top: 10px; border-radius: 8px; overflow: hidden; }
+  .swatch { flex: 1; height: 34px; }
+  .hexrow { display: flex; }
+  .hexrow span { flex: 1; text-align: center; font-size: 8.5px; color: #889; margin-top: 4px; }
+
+  /* ===== A: Aftershow (original, reference) ===== */
+  .sa .screen { background: #0B0B1E; }
+  .sa .navtitle { color: #F5F2FF; } .sa .subtitle { color: #9A93B8; }
+  .sa .search { background: #1A1533; color: #9A93B8; }
+  .sa .tilelabel { color: #F5F2FF; }
+  .sa .t1 { background: linear-gradient(135deg, #8E5CF7, #3B2A66); }
+  .sa .t2 { background: linear-gradient(135deg, #E84393, #5A2049); }
+  .sa .t3 { background: linear-gradient(135deg, #4A3F7A, #1A1533); }
+  .sa .cta { background: #E84393; color: #fff; }
+  .sa .pill-ok { background: rgba(61,220,151,.18); color: #3DDC97; }
+  .sa .pill-warn { background: rgba(255,180,84,.18); color: #FFB454; }
+  .sa .tabbar { background: #1A1533; color: #9A93B8; }
+  .sa .tab.active { color: #E84393; } .sa .tab .dot { background: #3B2F5C; } .sa .tab.active .dot { background: #E84393; }
+
+  /* ===== B: Aftershow Muted — pink demoted to a garnish ===== */
+  .sb .screen { background: #0B0B1E; }
+  .sb .navtitle { color: #F5F2FF; } .sb .subtitle { color: #9A93B8; }
+  .sb .search { background: #1A1533; color: #9A93B8; }
+  .sb .tilelabel { color: #F5F2FF; }
+  .sb .t1 { background: linear-gradient(135deg, #8E5CF7, #3B2A66); }
+  .sb .t2 { background: linear-gradient(135deg, #6C55C8, #2E2258); }
+  .sb .t3 { background: linear-gradient(135deg, #4A3F7A, #1A1533); }
+  .sb .cta { background: #8E5CF7; color: #fff; }
+  .sb .pill-ok { background: rgba(61,220,151,.18); color: #3DDC97; }
+  .sb .pill-warn { background: rgba(232,67,147,.16); color: #E84393; }
+  .sb .tabbar { background: #1A1533; color: #9A93B8; }
+  .sb .tab.active { color: #8E5CF7; } .sb .tab .dot { background: #3B2F5C; } .sb .tab.active .dot { background: #8E5CF7; }
+
+  /* ===== C: Violet Velvet — no pink at all, monochrome violet ===== */
+  .sc .screen { background: #0D0A1A; }
+  .sc .navtitle { color: #F3EFFF; } .sc .subtitle { color: #948CB0; }
+  .sc .search { background: #191330; color: #948CB0; }
+  .sc .tilelabel { color: #F3EFFF; }
+  .sc .t1 { background: linear-gradient(135deg, #A78BFA, #4C3A8C); }
+  .sc .t2 { background: linear-gradient(135deg, #7C5CE0, #33265E); }
+  .sc .t3 { background: linear-gradient(135deg, #3D3366, #191330); }
+  .sc .cta { background: #A78BFA; color: #1A0F3D; }
+  .sc .pill-ok { background: rgba(122,220,180,.16); color: #7ADCB4; }
+  .sc .pill-warn { background: rgba(230,200,120,.16); color: #E6C878; }
+  .sc .tabbar { background: #191330; color: #948CB0; }
+  .sc .tab.active { color: #A78BFA; } .sc .tab .dot { background: #352A5E; } .sc .tab.active .dot { background: #A78BFA; }
+
+  /* ===== D: Aftershow Ember — violet dark + coral-rose warmth ===== */
+  .sd .screen { background: #120D20; }
+  .sd .navtitle { color: #FBF3F1; } .sd .subtitle { color: #A093A8; }
+  .sd .search { background: #211735; color: #A093A8; }
+  .sd .tilelabel { color: #FBF3F1; }
+  .sd .t1 { background: linear-gradient(135deg, #FF7B72, #8C3230); }
+  .sd .t2 { background: linear-gradient(135deg, #8E5CF7, #3B2A66); }
+  .sd .t3 { background: linear-gradient(135deg, #44335F, #211735); }
+  .sd .cta { background: #FF7B72; color: #3D0F0D; }
+  .sd .pill-ok { background: rgba(61,220,151,.18); color: #3DDC97; }
+  .sd .pill-warn { background: rgba(255,183,120,.18); color: #FFB778; }
+  .sd .tabbar { background: #211735; color: #A093A8; }
+  .sd .tab.active { color: #FF7B72; } .sd .tab .dot { background: #3C2D5C; } .sd .tab.active .dot { background: #FF7B72; }
+
+  /* ===== E: Aftershow Iris — violet dark + periwinkle blue ===== */
+  .se .screen { background: #0A0D22; }
+  .se .navtitle { color: #F0F3FF; } .se .subtitle { color: #8E96BC; }
+  .se .search { background: #171D3E; color: #8E96BC; }
+  .se .tilelabel { color: #F0F3FF; }
+  .se .t1 { background: linear-gradient(135deg, #7C9BFF, #2E3E80; ); }
+  .se .t1 { background: linear-gradient(135deg, #7C9BFF, #2E3E80); }
+  .se .t2 { background: linear-gradient(135deg, #9D7BFF, #40307E); }
+  .se .t3 { background: linear-gradient(135deg, #333B6B, #171D3E); }
+  .se .cta { background: #7C9BFF; color: #0E1740; }
+  .se .pill-ok { background: rgba(110,231,183,.16); color: #6EE7B7; }
+  .se .pill-warn { background: rgba(244,164,196,.18); color: #F4A4C4; }
+  .se .tabbar { background: #171D3E; color: #8E96BC; }
+  .se .tab.active { color: #7C9BFF; } .se .tab .dot { background: #2C3462; } .se .tab.active .dot { background: #7C9BFF; }
+</style>
+</head>
+<body>
+<h1>Aftershow Variations</h1>
+<p class="intro">The original for reference, then four siblings. B is your "less pink" request — same bones, pink demoted from lead singer to backing vocals.</p>
+
+<div class="schemes">
+
+  <div class="scheme sa">
+    <h2>A · Aftershow (original)</h2>
+    <p class="tagline">Reference. Magenta leads: buttons, active tab, selection.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+    <div class="swatches"><div class="swatch" style="background:#0B0B1E"></div><div class="swatch" style="background:#1A1533"></div><div class="swatch" style="background:#E84393"></div><div class="swatch" style="background:#8E5CF7"></div><div class="swatch" style="background:#FFB454"></div><div class="swatch" style="background:#F5F2FF"></div></div>
+    <div class="hexrow"><span>0B0B1E</span><span>1A1533</span><span>E84393</span><span>8E5CF7</span><span>FFB454</span><span>F5F2FF</span></div>
+  </div>
+
+  <div class="scheme sb">
+    <h2>B · Aftershow Muted ★</h2>
+    <p class="tagline">Your request: violet takes the lead (buttons, tabs); pink survives only in tiny moments — badges and rare highlights.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+    <div class="swatches"><div class="swatch" style="background:#0B0B1E"></div><div class="swatch" style="background:#1A1533"></div><div class="swatch" style="background:#8E5CF7"></div><div class="swatch" style="background:#6C55C8"></div><div class="swatch" style="background:#E84393"></div><div class="swatch" style="background:#F5F2FF"></div></div>
+    <div class="hexrow"><span>0B0B1E</span><span>1A1533</span><span>8E5CF7</span><span>6C55C8</span><span>E84393</span><span>F5F2FF</span></div>
+  </div>
+
+  <div class="scheme sc">
+    <h2>C · Violet Velvet</h2>
+    <p class="tagline">No pink at all: monochrome violet with a pale lavender accent. Elegant, premium, quietest of the set.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+    <div class="swatches"><div class="swatch" style="background:#0D0A1A"></div><div class="swatch" style="background:#191330"></div><div class="swatch" style="background:#A78BFA"></div><div class="swatch" style="background:#7C5CE0"></div><div class="swatch" style="background:#E6C878"></div><div class="swatch" style="background:#F3EFFF"></div></div>
+    <div class="hexrow"><span>0D0A1A</span><span>191330</span><span>A78BFA</span><span>7C5CE0</span><span>E6C878</span><span>F3EFFF</span></div>
+  </div>
+
+  <div class="scheme sd">
+    <h2>D · Aftershow Ember</h2>
+    <p class="tagline">Pink swapped for coral-rose: warmer, sunset-after-the-show. Violet stays in a supporting role.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+    <div class="swatches"><div class="swatch" style="background:#120D20"></div><div class="swatch" style="background:#211735"></div><div class="swatch" style="background:#FF7B72"></div><div class="swatch" style="background:#8E5CF7"></div><div class="swatch" style="background:#FFB778"></div><div class="swatch" style="background:#FBF3F1"></div></div>
+    <div class="hexrow"><span>120D20</span><span>211735</span><span>FF7B72</span><span>8E5CF7</span><span>FFB778</span><span>FBF3F1</span></div>
+  </div>
+
+  <div class="scheme se">
+    <h2>E · Aftershow Iris</h2>
+    <p class="tagline">Cooler sibling: periwinkle blue leads over indigo night. Dreamier, calmer; pink reduced to a whisper in warnings.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+    <div class="swatches"><div class="swatch" style="background:#0A0D22"></div><div class="swatch" style="background:#171D3E"></div><div class="swatch" style="background:#7C9BFF"></div><div class="swatch" style="background:#9D7BFF"></div><div class="swatch" style="background:#F4A4C4"></div><div class="swatch" style="background:#F0F3FF"></div></div>
+    <div class="hexrow"><span>0A0D22</span><span>171D3E</span><span>7C9BFF</span><span>9D7BFF</span><span>F4A4C4</span><span>F0F3FF</span></div>
+  </div>
+
+</div>
+</body>
+</html>

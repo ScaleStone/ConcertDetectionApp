@@ -1,0 +1,68 @@
+{
+  "name": "rare_song_concert",
+  "description": "A concert with one off-setlist rare song, one encore, and filler photos. Correctness gates only: the response must be valid and reference real candidate IDs. The 'expectations' block is advisory (logged, never gated) per the golden-set policy.",
+  "request": {
+    "concertTitle": "Baby Keem",
+    "venue": "The Forum",
+    "eventDate": "2026-06-28",
+    "candidates": [
+      {
+        "id": "video-aaaa-1111",
+        "kind": "video",
+        "songTitle": "family ties",
+        "artist": "Baby Keem",
+        "isEncore": false,
+        "isRareSong": false,
+        "setlistPosition": 5,
+        "durationSeconds": 42,
+        "frames": []
+      },
+      {
+        "id": "video-bbbb-2222",
+        "kind": "video",
+        "songTitle": "Money Long",
+        "artist": "Rich Amiri",
+        "isEncore": false,
+        "isRareSong": true,
+        "setlistPosition": null,
+        "durationSeconds": 18,
+        "contextNotes": "Recognized song not on the official setlist",
+        "frames": []
+      },
+      {
+        "id": "video-cccc-3333",
+        "kind": "video",
+        "songTitle": "16",
+        "artist": "Baby Keem",
+        "isEncore": true,
+        "isRareSong": false,
+        "setlistPosition": 18,
+        "durationSeconds": 31,
+        "frames": []
+      },
+      {
+        "id": "photo-dddd-4444",
+        "kind": "photo",
+        "songTitle": "ORANGE SODA",
+        "artist": "Baby Keem",
+        "isEncore": false,
+        "isRareSong": false,
+        "setlistPosition": 9,
+        "frames": []
+      },
+      {
+        "id": "photo-eeee-5555",
+        "kind": "photo",
+        "songTitle": null,
+        "artist": null,
+        "isEncore": false,
+        "isRareSong": false,
+        "frames": []
+      }
+    ]
+  },
+  "expectations": {
+    "should_include_any": ["video-bbbb-2222", "video-cccc-3333"],
+    "note": "Rare song and encore should usually outrank filler; advisory only."
+  }
+}

@@ -14,6 +14,7 @@ final class AppEnvironment: ObservableObject {
     let lyricMatchingService: any LyricMatchingService
     let historyStore: any AnalysisHistoryStoring
     let concertLibraryStore: any ConcertLibraryStoring
+    let postSuggestionService: SuggestionService
 
     init(
         videoImportService: any VideoImportService,
@@ -26,7 +27,8 @@ final class AppEnvironment: ObservableObject {
         alignmentService: DefaultSetlistAlignmentService,
         lyricMatchingService: any LyricMatchingService,
         historyStore: any AnalysisHistoryStoring,
-        concertLibraryStore: any ConcertLibraryStoring
+        concertLibraryStore: any ConcertLibraryStoring,
+        postSuggestionService: SuggestionService
     ) {
         self.videoImportService = videoImportService
         self.audioExtractionService = audioExtractionService
@@ -39,6 +41,7 @@ final class AppEnvironment: ObservableObject {
         self.lyricMatchingService = lyricMatchingService
         self.historyStore = historyStore
         self.concertLibraryStore = concertLibraryStore
+        self.postSuggestionService = postSuggestionService
     }
 
     static func live() -> AppEnvironment {
@@ -56,7 +59,8 @@ final class AppEnvironment: ObservableObject {
             alignmentService: DefaultSetlistAlignmentService(),
             lyricMatchingService: DefaultLyricMatchingService(),
             historyStore: JSONAnalysisHistoryStore(fileURL: supportDirectory.appendingPathComponent("analysis-history.json")),
-            concertLibraryStore: JSONConcertLibraryStore(fileURL: supportDirectory.appendingPathComponent("concert-library.json"))
+            concertLibraryStore: JSONConcertLibraryStore(fileURL: supportDirectory.appendingPathComponent("concert-library.json")),
+            postSuggestionService: SuggestionService(client: backend)
         )
     }
 

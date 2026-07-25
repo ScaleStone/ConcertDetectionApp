@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routes import concerts, lyrics, setlists
+from app.routes import concerts, lyrics, setlists, suggestions
 from app.services import http_client
 
 logger = logging.getLogger("concert_song_finder.app")
@@ -31,6 +31,7 @@ app.add_middleware(
 app.include_router(concerts.router)
 app.include_router(setlists.router)
 app.include_router(lyrics.router)
+app.include_router(suggestions.router)
 
 
 @app.get("/health")

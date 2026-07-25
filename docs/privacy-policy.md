@@ -1,6 +1,6 @@
 # ConcertSongFinder Privacy Policy
 
-**Last updated: July 21, 2026**
+**Last updated: July 25, 2026**
 
 ConcertSongFinder ("the app") helps you organize concert videos and photos by
 identifying the songs playing in them. This policy explains what information
@@ -37,6 +37,17 @@ we do not sell or share data with anyone.
    which queries [setlist.fm](https://www.setlist.fm). No media, transcripts,
    photos, precise location, or personal identifiers are included in these
    requests.
+4. **Post Ideas (optional, off by default).** If you turn on the Post Ideas
+   feature and ask for suggestions, the app sends a few small still frames
+   (up to 3 low-resolution snapshots per clip), song titles, and the concert
+   name to our server, which forwards them to an AI service
+   ([Anthropic](https://www.anthropic.com/legal/privacy)) to pick your best
+   moments. Snapshots are stripped of all metadata (including location)
+   before sending, full videos and audio are never uploaded, and nothing is
+   stored on our server after your suggestions are generated. Per Anthropic's
+   commercial API terms, data sent through the API is not used to train
+   their models. This feature does nothing until you explicitly enable it,
+   and you can turn it off at any time from the Post Ideas menu.
 
 ## What we collect
 

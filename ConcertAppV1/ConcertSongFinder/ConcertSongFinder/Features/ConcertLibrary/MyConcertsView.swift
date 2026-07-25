@@ -127,6 +127,8 @@ private struct ConcertDetailView: View {
             VStack(alignment: .leading, spacing: 12) {
                 header
 
+                PostIdeasSection(concert: concert)
+
                 if filteredItems.isEmpty {
                     if searchText.isEmpty {
                         ContentUnavailableView("No media yet", systemImage: "photo.on.rectangle")

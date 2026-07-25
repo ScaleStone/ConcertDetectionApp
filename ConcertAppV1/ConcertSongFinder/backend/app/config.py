@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     backend_api_key: str | None = None
     cache_ttl_seconds: int = 900
     allowed_origins: str = "http://localhost:3000"
+    # Post-suggestions (Option C) settings
+    llm_api_key: str | None = None
+    llm_model: str | None = None
+    suggestions_enabled: bool = True
+    suggestions_daily_limit: int = 50
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

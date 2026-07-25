@@ -7,4 +7,5 @@ enum AppLog {
     static let network = Logger(subsystem: "ConcertSongFinder", category: "network")
     static let mediaClassification = Logger(subsystem: "ConcertSongFinder", category: "media-classification")
     static let concertLibrary = Logger(subsystem: "ConcertSongFinder", category: "concert-library")
+    static let postIdeas = Logger(subsystem: "ConcertSongFinder", category: "post-ideas")
 }
