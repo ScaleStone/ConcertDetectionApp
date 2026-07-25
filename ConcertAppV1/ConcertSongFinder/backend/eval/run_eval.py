@@ -132,13 +132,13 @@ async def main() -> int:
 
     if args.mode == "live":
         from app.config import get_settings
-        from app.services.llm_client import AnthropicSuggestionClient
+        from app.services.llm_client import make_llm_client
 
         settings = get_settings()
         if not settings.llm_api_key:
             print("ERROR: live mode requires LLM_API_KEY to be set")
             return 2
-        client = AnthropicSuggestionClient(settings=settings)
+        client = make_llm_client(settings)
     else:
         client = DeterministicMockLLM()
 

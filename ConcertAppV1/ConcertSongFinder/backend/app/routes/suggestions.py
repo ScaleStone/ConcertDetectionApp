@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.config import Settings, get_settings
 from app.models.suggestions import SuggestionsRequest, SuggestionsResponse
 from app.security import require_api_key
-from app.services.llm_client import AnthropicSuggestionClient, SuggestionLLMClient
+from app.services.llm_client import SuggestionLLMClient, make_llm_client
 from app.services.suggestions import generate_suggestions
 from app.services.trend_brief import current_trend_brief
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/suggestions", tags=["suggestions"], dependencies
 
 
 def get_llm_client(settings: Settings = Depends(get_settings)) -> SuggestionLLMClient:
-    return AnthropicSuggestionClient(settings=settings)
+    return make_llm_client(settings)
 
 
 @router.post("", response_model=SuggestionsResponse)

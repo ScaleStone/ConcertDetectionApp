@@ -171,3 +171,15 @@ def test_request_caps_enforced() -> None:
     oversized_frame["candidates"][0]["frames"] = ["x" * 500_000]
     response = client.post("/api/suggestions", json=oversized_frame)
     assert response.status_code == 422
+
+
+def test_llm_provider_autodetection():
+    from app.config import Settings
+    from app.services.llm_client import AnthropicSuggestionClient, GeminiSuggestionClient, make_llm_client
+
+    assert isinstance(make_llm_client(Settings(llm_api_key="sk-ant-abc123")), AnthropicSuggestionClient)
+    assert isinstance(make_llm_client(Settings(llm_api_key="AQ.vertex-express-key")), GeminiSuggestionClient)
+    assert isinstance(make_llm_client(Settings(llm_api_key="AIzaStudioKey")), GeminiSuggestionClient)
+    # Explicit override beats detection.
+    assert isinstance(make_llm_client(Settings(llm_api_key="AQ.key", llm_provider="anthropic")), AnthropicSuggestionClient)
+    assert isinstance(make_llm_client(Settings(llm_api_key="sk-ant-key", llm_provider="gemini")), GeminiSuggestionClient)

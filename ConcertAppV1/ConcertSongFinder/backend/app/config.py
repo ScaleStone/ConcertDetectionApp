@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     # Post-suggestions (Option C) settings
     llm_api_key: str | None = None
     llm_model: str | None = None
+    # "anthropic" | "gemini"; auto-detected from the key format when unset.
+    llm_provider: str | None = None
     suggestions_enabled: bool = True
     suggestions_daily_limit: int = 50
 

@@ -41,13 +41,13 @@ we do not sell or share data with anyone.
    feature and ask for suggestions, the app sends a few small still frames
    (up to 3 low-resolution snapshots per clip), song titles, and the concert
    name to our server, which forwards them to an AI service
-   ([Anthropic](https://www.anthropic.com/legal/privacy)) to pick your best
-   moments. Snapshots are stripped of all metadata (including location)
+   ([Google Gemini](https://ai.google.dev/gemini-api/terms)) to pick your
+   best moments. Snapshots are stripped of all metadata (including location)
    before sending, full videos and audio are never uploaded, and nothing is
-   stored on our server after your suggestions are generated. Per Anthropic's
-   commercial API terms, data sent through the API is not used to train
-   their models. This feature does nothing until you explicitly enable it,
-   and you can turn it off at any time from the Post Ideas menu.
+   stored on our server after your suggestions are generated. Under the
+   Gemini API's paid-tier terms, data sent through the API is not used to
+   train Google's models. This feature does nothing until you explicitly
+   enable it, and you can turn it off at any time from the Post Ideas menu.
 
 ## What we collect
 

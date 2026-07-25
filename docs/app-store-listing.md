@@ -73,7 +73,7 @@ All questionnaire answers "No" → expected rating 4+.
   not stored server-side beyond transient caches.
 - **Post Ideas note:** the optional, off-by-default Post Ideas feature sends
   a few metadata-stripped still frames plus song titles to our server and an
-  AI provider (Anthropic) when the user explicitly requests suggestions.
+  AI provider (Google Gemini) when the user explicitly requests suggestions.
   Nothing is stored or linked to identity, so "Data is not collected" still
   holds under Apple's definition (data must be retained to count as
   collected). If Apple review asks, point to the "Post Ideas" section of the
