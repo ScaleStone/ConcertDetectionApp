@@ -6,21 +6,31 @@ struct RootView: View {
     @State private var uploadRoute: UploadRoute = .upload
 
     var body: some View {
-        TabView {
-            NavigationStack {
-                MyConcertsView()
-            }
-            .tabItem {
-                Label("My Concerts", systemImage: "music.mic")
-            }
+        ZStack {
+            CSFDesign.pageBackground.ignoresSafeArea()
 
-            NavigationStack {
-                uploadFlow
-            }
-            .tabItem {
-                Label("Upload", systemImage: "square.and.arrow.up")
+            TabView {
+                NavigationStack {
+                    MyConcertsView()
+                }
+                .tabItem {
+                    Label("My Concerts", systemImage: "music.mic")
+                }
+
+                NavigationStack {
+                    uploadFlow
+                }
+                .tabItem {
+                    Label("Upload", systemImage: "square.and.arrow.up")
+                }
             }
         }
+        .tint(CSFDesign.primary)
+        .toolbarBackground(CSFDesign.surface, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(.dark, for: .tabBar)
+        .background(CSFDesign.pageBackground.ignoresSafeArea())
+        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder

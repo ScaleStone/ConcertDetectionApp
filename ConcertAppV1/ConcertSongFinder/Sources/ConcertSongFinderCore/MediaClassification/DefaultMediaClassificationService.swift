@@ -309,9 +309,9 @@ public final class DefaultMediaClassificationService {
         case let (.some(previousIndex), .some(nextIndex)):
             lower = min(previousIndex, nextIndex)
             upper = max(previousIndex, nextIndex)
-            let previousDistance = previous.map { date.timeIntervalSince($0.end) } ?? .greatestFiniteMagnitude
-            let nextDistance = next.map { $0.start.timeIntervalSince(date) } ?? .greatestFiniteMagnitude
-            suggestedAnchor = previousDistance <= nextDistance ? previous : next
+            // Keep the suggestion aligned with the first ordered option. The
+            // full bounded range remains available for manual correction.
+            suggestedAnchor = previous
             reason = "Bounded by previous and next setlist anchors"
         case let (.some(previousIndex), .none):
             lower = previousIndex

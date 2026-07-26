@@ -21,6 +21,8 @@ struct ResultsView: View {
             }
         }
         .navigationTitle("Results")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done", action: onDone)
@@ -34,8 +36,9 @@ struct ResultsView: View {
             if let error = viewModel.errorMessage {
                 Section {
                     Label(error, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(CSFDesign.amber)
                 }
+                .listRowBackground(CSFDesign.surface)
             }
 
             if viewModel.record.clusters.count > 1 {
@@ -49,6 +52,7 @@ struct ResultsView: View {
                         Link("Setlist data attribution", destination: attribution)
                             .font(.caption)
                     }
+                    .listRowBackground(CSFDesign.surface)
                 }
 
                 ForEach(viewModel.record.videos) { video in
@@ -57,6 +61,7 @@ struct ResultsView: View {
                             viewModel.selectedCorrection = SegmentCorrectionSelection(videoID: video.id, segment: segment)
                         }
                     }
+                    .listRowBackground(CSFDesign.surface)
                 }
 
                 if !viewModel.record.photos.isEmpty {
@@ -65,6 +70,7 @@ struct ResultsView: View {
                             PhotoResultCard(photo: photo)
                         }
                     }
+                    .listRowBackground(CSFDesign.surface)
                 }
             }
 
@@ -76,7 +82,9 @@ struct ResultsView: View {
                     Label("Delete Saved Analysis", systemImage: "trash")
                 }
             }
+            .listRowBackground(CSFDesign.surface)
         }
+        .csfListChrome()
         .sheet(item: Binding(
             get: { viewModel.selectedCorrection },
             set: { viewModel.selectedCorrection = $0 }
@@ -109,6 +117,7 @@ struct ResultsView: View {
                 PhotoResultCard(photo: photo)
             }
         }
+        .listRowBackground(CSFDesign.surface)
     }
 
     private func clusterHeader(_ cluster: ConcertClusterAssignment) -> String {
@@ -139,11 +148,11 @@ private struct PhotoResultCard: View {
                 if let date = photo.createdAt {
                     Text(Formatting.timestamp.string(from: date))
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                 } else {
                     Text("Capture time missing")
                         .font(.subheadline)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(CSFDesign.amber)
                 }
                 Text(classificationLabel)
                     .font(.subheadline.weight(.semibold))
@@ -154,11 +163,11 @@ private struct PhotoResultCard: View {
                 }
                 Text(evidenceSummary)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                 if !photo.evidence.boundedCandidateOptions.isEmpty {
                     Text(possibleSongsSummary(photo.evidence.boundedCandidateOptions))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                 }
             }
         }
@@ -191,7 +200,7 @@ private struct PhotoResultCard: View {
     private var timingColor: Color {
         switch photo.concertTiming {
         case .beforeConcert, .afterConcert:
-            .orange
+            CSFDesign.amber
         default:
             .secondary
         }
@@ -229,15 +238,15 @@ private struct VideoResultCard: View {
                     if let date = video.createdAt {
                         Text(Formatting.timestamp.string(from: date))
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                     } else {
                         Text("Recording time missing")
                             .font(.subheadline)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(CSFDesign.amber)
                     }
                     Text(Formatting.duration(video.duration))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                 }
             }
 
@@ -264,14 +273,14 @@ private struct SegmentRow: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("\(Formatting.duration(segment.startTime))-\(Formatting.duration(segment.endTime))")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                     .frame(width: 92, alignment: .leading)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
                         .font(.subheadline.weight(.semibold))
                     Text(evidenceSummary)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                 }
                 Spacer()
                 Button(action: onCorrect) {
@@ -282,11 +291,11 @@ private struct SegmentRow: View {
             if !segment.evidence.boundedCandidateOptions.isEmpty {
                 Text(possibleSongsSummary(segment.evidence.boundedCandidateOptions))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
             } else if !segment.alternativeCandidates.isEmpty {
                 Text("Alternatives: " + segment.alternativeCandidates.map { "\($0.song.title) - \($0.confidenceLabel.rawValue.capitalized)" }.joined(separator: ", "))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
             }
         }
     }
@@ -368,7 +377,7 @@ private struct TimelineBar: View {
                             if segment.endTime - segment.startTime > duration * 0.18 {
                                 Text(shortLabel(segment))
                                     .font(.caption2)
-                                    .foregroundStyle(.white)
+                                .foregroundStyle(CSFDesign.textPrimary)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.7)
                                     .padding(.horizontal, 3)
@@ -382,10 +391,10 @@ private struct TimelineBar: View {
 
     private func color(for status: SegmentStatus) -> Color {
         switch status {
-        case .identified, .userConfirmed: .green
-        case .likely: .blue
-        case .possible: .orange
-        case .transition: .purple
+        case .identified, .userConfirmed: CSFDesign.primary
+        case .likely: CSFDesign.violet
+        case .possible: CSFDesign.amber
+        case .transition: CSFDesign.violet
         case .speech: .gray
         case .unknown: .secondary
         }
@@ -410,7 +419,7 @@ private struct PhotoThumbnailView: View {
                     .scaledToFill()
             } else {
                 Image(systemName: "photo")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
             }
         }
     }
@@ -430,7 +439,7 @@ private struct VideoThumbnailView: View {
                     .scaledToFill()
             } else {
                 Image(systemName: "video")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
             }
         }
         .task {

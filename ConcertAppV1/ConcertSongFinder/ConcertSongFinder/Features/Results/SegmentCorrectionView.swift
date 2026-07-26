@@ -45,7 +45,7 @@ struct SegmentCorrectionView: View {
                                     Text(candidate.song.title)
                                     Text("\(candidate.song.artist) • \(candidate.confidenceLabel.rawValue.capitalized)")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                                 }
                             }
                         }
@@ -75,6 +75,7 @@ struct SegmentCorrectionView: View {
                     }
                 }
             }
+            .csfListChrome()
             .navigationTitle("Correct Segment")
             .navigationBarTitleDisplayMode(.inline)
         }

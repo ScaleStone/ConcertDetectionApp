@@ -27,7 +27,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         CFBundleVersion: "2"
         UILaunchScreen:
-          UIColorName: ""
+          UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft

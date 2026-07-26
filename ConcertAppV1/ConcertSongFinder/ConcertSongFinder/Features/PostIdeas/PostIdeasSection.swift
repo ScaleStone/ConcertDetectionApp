@@ -32,14 +32,14 @@ struct PostIdeasSection: View {
                     ProgressView()
                     Text("Picking your best moments…")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                 }
                 .padding(.vertical, 8)
             } else if let errorMessage {
                 VStack(alignment: .leading, spacing: 8) {
                     Label(errorMessage, systemImage: "exclamationmark.triangle")
                         .font(.subheadline)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(CSFDesign.amber)
                     Button("Try Again") { requestIdeas() }
                         .font(.subheadline.weight(.semibold))
                 }
@@ -49,7 +49,7 @@ struct PostIdeasSection: View {
                 if visible.isEmpty {
                     Text("All ideas dismissed. Tap Refresh for the same picks.")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                 } else {
                     ForEach(visible) { suggestion in
                         if let candidate = result.candidatesByID[suggestion.candidateId] {
@@ -94,6 +94,9 @@ struct PostIdeasSection: View {
             }
         }
         .padding(.horizontal)
+        .padding(.vertical, 14)
+        .background(CSFDesign.surface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(.horizontal)
         .sheet(isPresented: $showConsentSheet) {
             PostIdeasConsentSheet {
                 consentGranted = true
@@ -128,7 +131,7 @@ struct PostIdeasSection: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                 }
                 .accessibilityLabel("Post ideas options")
             }
@@ -287,7 +290,7 @@ private struct PostIdeaCard: View {
                     }
                     Text(suggestion.reason)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -326,7 +329,11 @@ private struct PostIdeaCard: View {
             }
         }
         .padding(12)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .background(CSFDesign.raisedSurface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(CSFDesign.line)
+        }
         .accessibilityElement(children: .contain)
     }
 
@@ -345,7 +352,7 @@ private struct PostIdeaCard: View {
                     .scaledToFill()
             } else {
                 Image(systemName: candidate.dto.kind == "video" ? "play.rectangle" : "photo")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
             }
         }
         .frame(width: 64, height: 64)
@@ -354,7 +361,7 @@ private struct PostIdeaCard: View {
             if candidate.dto.kind == "video" {
                 Image(systemName: "play.fill")
                     .font(.caption2)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(CSFDesign.textPrimary)
                     .padding(3)
                     .background(.black.opacity(0.55), in: Circle())
                     .padding(3)
@@ -401,6 +408,7 @@ struct PostIdeasConsentSheet: View {
                 }
                 .padding()
             }
+            .csfPageChrome()
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 10) {
                     Button {
@@ -418,7 +426,7 @@ struct PostIdeasConsentSheet: View {
                         .font(.subheadline)
                 }
                 .padding()
-                .background(.bar)
+                .background(CSFDesign.surface)
             }
             .navigationTitle("Post Ideas")
             .navigationBarTitleDisplayMode(.inline)
@@ -434,7 +442,7 @@ struct PostIdeasConsentSheet: View {
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.subheadline.weight(.semibold))
-                Text(detail).font(.caption).foregroundStyle(.secondary)
+                Text(detail).font(.caption).foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
             }
         }
     }
