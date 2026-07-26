@@ -183,3 +183,51 @@ def test_llm_provider_autodetection():
     # Explicit override beats detection.
     assert isinstance(make_llm_client(Settings(llm_api_key="AQ.key", llm_provider="anthropic")), AnthropicSuggestionClient)
     assert isinstance(make_llm_client(Settings(llm_api_key="sk-ant-key", llm_provider="gemini")), GeminiSuggestionClient)
+
+
+def valid_debug_llm_json(picked: list[str], all_ids: list[str]) -> str:
+    payload = json.loads(valid_llm_json(picked))
+    payload["evaluations"] = [
+        {"candidateId": cid, "score": 90 - i * 10, "reasoning": f"Scored {cid} against rarity and human-moment criteria."}
+        for i, cid in enumerate(all_ids)
+    ]
+    return json.dumps(payload)
+
+
+def test_debug_mode_returns_scored_evaluations_for_all_candidates() -> None:
+    ids = ["a", "b", "c", "d"]
+    mock = MockLLM([valid_debug_llm_json(["c", "a", "b"], ids)])
+    client = make_client(mock)
+    body_in = request_body(ids)
+    body_in["debug"] = True
+    response = client.post("/api/suggestions", json=body_in)
+    assert response.status_code == 200
+    body = response.json()
+    evaluations = body["evaluations"]
+    assert {e["candidateId"] for e in evaluations} == set(ids)
+    # Sorted by score descending.
+    assert [e["score"] for e in evaluations] == sorted([e["score"] for e in evaluations], reverse=True)
+    assert all(e["reasoning"] for e in evaluations)
+    assert "DEBUG MODE" in mock.calls[0]
+
+
+def test_debug_mode_incomplete_evaluations_fails_closed() -> None:
+    ids = ["a", "b", "c", "d"]
+    # Evaluations omit candidate "d" — invalid on both attempts.
+    bad = valid_debug_llm_json(["c", "a", "b"], ["a", "b", "c"])
+    mock = MockLLM([bad, bad])
+    client = make_client(mock)
+    body_in = request_body(ids)
+    body_in["debug"] = True
+    response = client.post("/api/suggestions", json=body_in)
+    assert response.status_code == 502
+
+
+def test_non_debug_response_has_no_evaluations() -> None:
+    ids = ["a", "b", "c"]
+    mock = MockLLM([valid_llm_json(["a", "b", "c"])])
+    client = make_client(mock)
+    response = client.post("/api/suggestions", json=request_body(ids))
+    assert response.status_code == 200
+    assert response.json()["evaluations"] is None
+    assert "DEBUG MODE" not in mock.calls[0]

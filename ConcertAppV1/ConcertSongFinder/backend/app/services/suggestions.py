@@ -21,7 +21,7 @@ from datetime import date
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app.models.suggestions import PostSuggestion, SuggestionsRequest, SuggestionsResponse
+from app.models.suggestions import CandidateEvaluation, PostSuggestion, SuggestionsRequest, SuggestionsResponse
 from app.services.llm_client import SuggestionLLMClient
 from app.services.trend_brief import TrendBrief
 
@@ -132,10 +132,22 @@ def _user_prompt(request: SuggestionsRequest, brief: TrendBrief, count: int) -> 
         lines.append(" ".join(parts))
     lines.append("")
     lines.append(f"Pick the top {count} and respond with the JSON object only.")
+    if request.debug:
+        lines.append(
+            'DEBUG MODE: additionally include an "evaluations" array in the same '
+            "JSON object with an entry for EVERY candidate listed above (no "
+            "omissions, no duplicates), each shaped as "
+            '{"candidateId": "<id>", "score": <integer 0-100>, "reasoning": '
+            '"<one or two sentences explaining the score against the criteria>"}. '
+            "Scores must be consistent with your ranking: suggested candidates "
+            "score highest."
+        )
     return "\n".join(lines)
 
 
-def _parse_and_validate(raw: str, request: SuggestionsRequest, count: int) -> list[PostSuggestion]:
+def _parse_and_validate(
+    raw: str, request: SuggestionsRequest, count: int
+) -> tuple[list[PostSuggestion], list[CandidateEvaluation] | None]:
     text = raw.strip()
     # Tolerate accidental markdown fences.
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
@@ -156,7 +168,21 @@ def _parse_and_validate(raw: str, request: SuggestionsRequest, count: int) -> li
         seen_ids.add(suggestion.candidateId)
     if len(suggestions) != count:
         raise SuggestionValidationError(f"expected {count} suggestions, got {len(suggestions)}")
-    return sorted(suggestions, key=lambda item: item.rank)
+
+    evaluations: list[CandidateEvaluation] | None = None
+    if request.debug:
+        try:
+            evaluations = [CandidateEvaluation(**item) for item in payload["evaluations"]]
+        except (KeyError, TypeError, ValidationError) as exc:
+            raise SuggestionValidationError(f"missing/invalid evaluations: {type(exc).__name__}")
+        evaluated_ids = [evaluation.candidateId for evaluation in evaluations]
+        if len(set(evaluated_ids)) != len(evaluated_ids):
+            raise SuggestionValidationError("duplicate candidateId in evaluations")
+        if set(evaluated_ids) != valid_ids:
+            raise SuggestionValidationError("evaluations must cover every candidate exactly once")
+        evaluations.sort(key=lambda item: item.score, reverse=True)
+
+    return sorted(suggestions, key=lambda item: item.rank), evaluations
 
 
 class SuggestionValidationError(Exception):
@@ -186,16 +212,17 @@ async def generate_suggestions(
         )
         raw = await client.rank(request, CORE_PROMPT, prompt)
         try:
-            suggestions = _parse_and_validate(raw, request, count)
+            suggestions, evaluations = _parse_and_validate(raw, request, count)
             elapsed_ms = int((time.monotonic() - started) * 1000)
             logger.info(
-                "suggestions ok request=%s prompt=%s brief=%s candidates=%s attempt=%s latency_ms=%s",
-                request_id, PROMPT_VERSION, brief.version, len(request.candidates), attempt, elapsed_ms,
+                "suggestions ok request=%s prompt=%s brief=%s candidates=%s attempt=%s latency_ms=%s debug=%s",
+                request_id, PROMPT_VERSION, brief.version, len(request.candidates), attempt, elapsed_ms, request.debug,
             )
             return SuggestionsResponse(
                 suggestions=suggestions,
                 promptVersion=PROMPT_VERSION,
                 trendBriefVersion=brief.version,
+                evaluations=evaluations,
             )
         except SuggestionValidationError as exc:
             last_error = str(exc)
