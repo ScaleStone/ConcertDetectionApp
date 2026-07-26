@@ -57,7 +57,7 @@ struct ShareMediaSheet: View {
                         if let errorMessage {
                             Section {
                                 Label(errorMessage, systemImage: "exclamationmark.triangle")
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(CSFDesign.amber)
                             }
                         }
                         Section {
@@ -79,6 +79,7 @@ struct ShareMediaSheet: View {
                             .disabled(isPreparing)
                         }
                     }
+                    .csfListChrome()
                     .navigationTitle("Share")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {

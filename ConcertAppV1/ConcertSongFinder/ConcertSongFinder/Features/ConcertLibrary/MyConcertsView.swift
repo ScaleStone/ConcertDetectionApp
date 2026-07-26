@@ -13,7 +13,8 @@ struct MyConcertsView: View {
     var body: some View {
         List {
             if let errorMessage {
-                Section { Label(errorMessage, systemImage: "exclamationmark.triangle").foregroundStyle(.orange) }
+                Section { Label(errorMessage, systemImage: "exclamationmark.triangle").foregroundStyle(CSFDesign.amber) }
+                    .listRowBackground(CSFDesign.surface)
             }
             Section("My Concerts") {
                 if concerts.isEmpty {
@@ -24,19 +25,22 @@ struct MyConcertsView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(concert.displayTitle).font(.headline)
                                 if !concert.displaySubtitle.isEmpty {
-                                    Text(concert.displaySubtitle).font(.subheadline).foregroundStyle(.secondary)
+                                    Text(concert.displaySubtitle).font(.subheadline).foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                                 }
                                 Text("\(concert.videos.count) videos • \(concert.photos.count) photos")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
                             }
                         }
                     }
                     .onDelete(perform: deleteConcerts)
                 }
             }
+            .listRowBackground(CSFDesign.surface)
         }
+        .csfListChrome()
         .navigationTitle("My Concerts")
+        .navigationBarTitleDisplayMode(.inline)
         .task { loadConcerts() }
         .refreshable { loadConcerts() }
     }
@@ -163,6 +167,7 @@ private struct ConcertDetailView: View {
             }
             .padding(.vertical)
         }
+        .csfPageChrome()
         .navigationTitle(concert.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "Search by song name")
@@ -185,11 +190,11 @@ private struct ConcertDetailView: View {
             if !concert.displaySubtitle.isEmpty {
                 Text(concert.displaySubtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
             }
             Text("\(concert.videos.count) videos • \(concert.photos.count) photos")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
         }
         .padding(.horizontal)
     }
@@ -231,7 +236,7 @@ private struct MediaLibraryCell: View {
                             Text(Formatting.duration(segment.map { $0.endTime - $0.startTime } ?? video.duration))
                         }
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(CSFDesign.textPrimary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .background(.black.opacity(0.55), in: Capsule())
@@ -243,7 +248,7 @@ private struct MediaLibraryCell: View {
             Text(item.displayLabel)
                 .font(.caption.weight(.medium))
                 .lineLimit(1)
-                .foregroundStyle(item.songTitle == nil ? .secondary : .primary)
+                .foregroundStyle(item.songTitle == nil ? CSFDesign.textPrimary.opacity(0.58) : CSFDesign.textPrimary)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.songTitle ?? "Unknown song"), \(isVideo ? "video" : "photo")")
@@ -330,7 +335,7 @@ private struct PhotoViewerSheet: View {
                 if let image = UIImage(contentsOfFile: photo.localURL.path) {
                     Image(uiImage: image).resizable().scaledToFit().padding()
                 } else {
-                    ContentUnavailableView("Photo unavailable", systemImage: "photo").foregroundStyle(.white)
+                    ContentUnavailableView("Photo unavailable", systemImage: "photo").foregroundStyle(CSFDesign.textPrimary)
                 }
             }
             .navigationTitle(photo.fileName)
@@ -358,7 +363,7 @@ private struct LibraryPhotoThumbnailView: View {
     var body: some View {
         ZStack {
             Rectangle().fill(.thinMaterial)
-            if let image { Image(uiImage: image).resizable().scaledToFill() } else { Image(systemName: "photo").foregroundStyle(.secondary) }
+            if let image { Image(uiImage: image).resizable().scaledToFill() } else { Image(systemName: "photo").foregroundStyle(CSFDesign.textPrimary.opacity(0.60)) }
         }
         .task { image = await makeThumbnail() }
     }
@@ -388,7 +393,7 @@ private struct LibraryVideoThumbnailView: View {
     var body: some View {
         ZStack {
             Rectangle().fill(.thinMaterial)
-            if let image { Image(uiImage: image).resizable().scaledToFill() } else { Image(systemName: "play.rectangle").foregroundStyle(.secondary) }
+            if let image { Image(uiImage: image).resizable().scaledToFill() } else { Image(systemName: "play.rectangle").foregroundStyle(CSFDesign.textPrimary.opacity(0.60)) }
         }
         .task { image = await makeThumbnail() }
     }
