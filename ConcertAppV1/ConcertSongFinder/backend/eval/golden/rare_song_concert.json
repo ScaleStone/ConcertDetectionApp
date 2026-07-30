@@ -1,20 +1,23 @@
 {
   "name": "rare_song_concert",
-  "description": "A concert with one off-setlist rare song, one encore, and filler photos. Correctness gates only: the response must be valid and reference real candidate IDs. The 'expectations' block is advisory (logged, never gated) per the golden-set policy.",
+  "description": "A concert with a guest feature (off-setlist song by another artist), an encore, a high-clarity clip, and photos. Correctness gates only; 'expectations' is advisory.",
   "request": {
     "concertTitle": "Baby Keem",
     "venue": "The Forum",
     "eventDate": "2026-06-28",
+    "headlinerArtist": "Baby Keem",
     "candidates": [
       {
         "id": "video-aaaa-1111",
         "kind": "video",
         "songTitle": "family ties",
         "artist": "Baby Keem",
-        "isEncore": false,
-        "isRareSong": false,
         "setlistPosition": 5,
         "durationSeconds": 42,
+        "audioClarity": 0.92,
+        "segmentStartSeconds": 3,
+        "segmentEndSeconds": 45,
+        "videoDurationSeconds": 50,
         "frames": []
       },
       {
@@ -22,10 +25,14 @@
         "kind": "video",
         "songTitle": "Money Long",
         "artist": "Rich Amiri",
-        "isEncore": false,
         "isRareSong": true,
-        "setlistPosition": null,
+        "isGuestFeature": true,
+        "featuredArtist": "Rich Amiri",
         "durationSeconds": 18,
+        "audioClarity": 0.55,
+        "segmentStartSeconds": 0,
+        "segmentEndSeconds": 18,
+        "videoDurationSeconds": 25,
         "contextNotes": "Recognized song not on the official setlist",
         "frames": []
       },
@@ -35,9 +42,25 @@
         "songTitle": "16",
         "artist": "Baby Keem",
         "isEncore": true,
-        "isRareSong": false,
         "setlistPosition": 18,
         "durationSeconds": 31,
+        "audioClarity": 0.4,
+        "segmentStartSeconds": 10,
+        "segmentEndSeconds": 41,
+        "videoDurationSeconds": 55,
+        "frames": []
+      },
+      {
+        "id": "video-ffff-6666",
+        "kind": "video",
+        "songTitle": "HONEST",
+        "artist": "Baby Keem",
+        "setlistPosition": 7,
+        "durationSeconds": 22,
+        "audioClarity": 0.85,
+        "segmentStartSeconds": 0,
+        "segmentEndSeconds": 22,
+        "videoDurationSeconds": 22,
         "frames": []
       },
       {
@@ -45,8 +68,6 @@
         "kind": "photo",
         "songTitle": "ORANGE SODA",
         "artist": "Baby Keem",
-        "isEncore": false,
-        "isRareSong": false,
         "setlistPosition": 9,
         "frames": []
       },
@@ -55,14 +76,15 @@
         "kind": "photo",
         "songTitle": null,
         "artist": null,
-        "isEncore": false,
-        "isRareSong": false,
         "frames": []
       }
     ]
   },
   "expectations": {
-    "should_include_any": ["video-bbbb-2222", "video-cccc-3333"],
-    "note": "Rare song and encore should usually outrank filler; advisory only."
+    "category_should_include": {
+      "artistFeature": ["video-bbbb-2222"],
+      "bestQuality": ["video-aaaa-1111", "video-ffff-6666"]
+    },
+    "note": "Guest feature should land in artistFeature; the high-audioClarity clips should lead bestQuality. Advisory only."
   }
 }

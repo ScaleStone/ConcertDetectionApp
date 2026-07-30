@@ -3,8 +3,9 @@ import SwiftUI
 import UIKit
 
 /// "Post Ideas" section for the concert detail screen: opt-in AI suggestions
-/// for which clips to post, shown as cards that share through the existing
-/// share pipeline.
+/// grouped into categories (Artist Feature, Unique Moments, Best Quality,
+/// Photo Slideshow), sharing through the existing pipeline. Empty categories
+/// are hidden.
 ///
 /// Privacy: strictly consent-gated (off by default). No network request is
 /// made before the user grants consent, and consent is revocable from the
@@ -45,47 +46,14 @@ struct PostIdeasSection: View {
                 }
                 .padding(.vertical, 4)
             } else if let result {
-                let visible = result.response.suggestions.filter { !dismissedCandidateIDs.contains($0.candidateId) }
-                if visible.isEmpty {
-                    Text("All ideas dismissed. Tap Refresh for the same picks.")
-                        .font(.subheadline)
-                        .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
-                } else {
-                    ForEach(visible) { suggestion in
-                        if let candidate = result.candidatesByID[suggestion.candidateId] {
-                            PostIdeaCard(
-                                suggestion: suggestion,
-                                candidate: candidate,
-                                onShare: { share(suggestion: suggestion, candidate: candidate, result: result) },
-                                onDismiss: { dismissIdea(suggestion, result: result) }
-                            )
-                        }
-                    }
-                }
-                if showScores {
-                    if let evaluations = result.response.evaluations {
-                        AIScoresPanel(
-                            evaluations: evaluations,
-                            pickedIDs: Set(result.response.suggestions.map(\.candidateId)),
-                            candidatesByID: result.candidatesByID
-                        )
-                    } else {
-                        Text("Scores were not requested for this result. Tap Refresh to re-run with scoring.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } else if consentGranted {
-                Button {
-                    requestIdeas()
-                } label: {
-                    Label("Get Post Ideas", systemImage: "sparkles")
-                        .font(.subheadline.weight(.semibold))
-                }
-                .buttonStyle(.bordered)
+                loadedContent(result)
             } else {
                 Button {
-                    showConsentSheet = true
+                    if consentGranted {
+                        requestIdeas()
+                    } else {
+                        showConsentSheet = true
+                    }
                 } label: {
                     Label("Get Post Ideas", systemImage: "sparkles")
                         .font(.subheadline.weight(.semibold))
@@ -109,6 +77,64 @@ struct PostIdeasSection: View {
             // (cached results per mode make flipping back instant).
             if result != nil { requestIdeas() }
         }
+    }
+
+    @ViewBuilder
+    private func loadedContent(_ result: SuggestionService.Result) -> some View {
+        let visible = result.response.suggestions.filter { !dismissedCandidateIDs.contains($0.candidateId) }
+        if visible.isEmpty {
+            Text("All ideas dismissed. Tap Refresh in the ••• menu to see the same picks again.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        } else {
+            ForEach(SuggestionCategory.displayOrder, id: \.rawValue) { category in
+                let entries = visible
+                    .filter { $0.suggestionCategory == category }
+                    .sorted { $0.rank < $1.rank }
+                if !entries.isEmpty {
+                    categoryHeader(category)
+                    if category == .photoSlideshow {
+                        SlideshowCard(
+                            entries: entries,
+                            candidatesByID: result.candidatesByID,
+                            onShare: { shareSlideshow(entries: entries, result: result) },
+                            onDismiss: { dismissSlideshow(entries: entries, result: result) }
+                        )
+                    } else {
+                        ForEach(entries) { suggestion in
+                            if let candidate = result.candidatesByID[suggestion.candidateId] {
+                                PostIdeaCard(
+                                    suggestion: suggestion,
+                                    candidate: candidate,
+                                    onShare: { share(suggestion: suggestion, candidate: candidate, result: result) },
+                                    onDismiss: { dismissIdea(suggestion, result: result) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if showScores {
+            if let evaluations = result.response.evaluations {
+                AIScoresPanel(
+                    evaluations: evaluations,
+                    pickedIDs: Set(result.response.suggestions.map(\.candidateId)),
+                    candidatesByID: result.candidatesByID
+                )
+            } else {
+                Text("Scores were not requested for this result. Tap Refresh to re-run with scoring.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func categoryHeader(_ category: SuggestionCategory) -> some View {
+        Label(category.displayName, systemImage: category.systemImage)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.top, 4)
     }
 
     private var header: some View {
@@ -170,6 +196,15 @@ struct PostIdeasSection: View {
         }
     }
 
+    private func shareContext(songTitle: String?, artist: String?) -> MediaShareContext {
+        MediaShareContext(
+            songTitle: songTitle,
+            artist: artist ?? concert.selectedSetlist?.artistName ?? concert.selectedConcert?.artistName,
+            venue: concert.selectedSetlist?.venueName ?? concert.selectedConcert?.venueName,
+            eventDate: concert.concertDate
+        )
+    }
+
     private func share(suggestion: PostSuggestionDTO, candidate: SuggestionCandidateBuilder.BuiltCandidate, result: SuggestionService.Result) {
         environment.postSuggestionService.logOutcome("used", suggestion: suggestion, response: result.response, concert: concert)
         let media: MediaShareRequest.Media
@@ -177,26 +212,47 @@ struct PostIdeasSection: View {
         case .video(let video, _): media = .video(video)
         case .photo(let photo): media = .photo(photo)
         }
-        let context = MediaShareContext(
-            songTitle: candidate.item.songTitle,
-            artist: candidate.item.songArtist ?? concert.selectedSetlist?.artistName ?? concert.selectedConcert?.artistName,
-            venue: concert.selectedSetlist?.venueName ?? concert.selectedConcert?.venueName,
-            eventDate: concert.concertDate
+        shareRequest = MediaShareRequest(
+            media: media,
+            context: shareContext(songTitle: candidate.item.songTitle, artist: candidate.item.songArtist),
+            clipRange: suggestion.clipRange
         )
-        shareRequest = MediaShareRequest(media: media, context: context)
+    }
+
+    private func shareSlideshow(entries: [PostSuggestionDTO], result: SuggestionService.Result) {
+        let photos: [ConcertPhoto] = entries.compactMap { entry in
+            guard case .photo(let photo) = result.candidatesByID[entry.candidateId]?.item.media else { return nil }
+            return photo
+        }
+        guard !photos.isEmpty else { return }
+        for entry in entries {
+            environment.postSuggestionService.logOutcome("used", suggestion: entry, response: result.response, concert: concert)
+        }
+        shareRequest = MediaShareRequest(
+            media: .slideshow(photos),
+            context: shareContext(songTitle: nil, artist: nil),
+            clipRange: nil
+        )
     }
 
     private func dismissIdea(_ suggestion: PostSuggestionDTO, result: SuggestionService.Result) {
         environment.postSuggestionService.logOutcome("dismissed", suggestion: suggestion, response: result.response, concert: concert)
         withAnimation { _ = dismissedCandidateIDs.insert(suggestion.candidateId) }
     }
+
+    private func dismissSlideshow(entries: [PostSuggestionDTO], result: SuggestionService.Result) {
+        for entry in entries {
+            environment.postSuggestionService.logOutcome("dismissed", suggestion: entry, response: result.response, concert: concert)
+        }
+        withAnimation { dismissedCandidateIDs.formUnion(entries.map(\.candidateId)) }
+    }
 }
 
 // MARK: - AI Scores (testing)
 
-/// Testing panel: the model's score and reasoning for EVERY candidate it
-/// considered, sorted by score, with the actual picks highlighted. Visible
-/// only when "Show AI Scores (Testing)" is enabled in the section menu.
+/// Testing panel: the model's score, best-fit category, and reasoning for
+/// EVERY candidate it considered, sorted by score, with the actual picks
+/// highlighted. Visible only when "Show AI Scores (Testing)" is enabled.
 private struct AIScoresPanel: View {
     let evaluations: [CandidateEvaluationDTO]
     let pickedIDs: Set<String>
@@ -217,6 +273,14 @@ private struct AIScoresPanel: View {
                                 Text(label(for: evaluation.candidateId))
                                     .font(.caption.weight(.semibold))
                                     .lineLimit(1)
+                                if let category = evaluation.category.flatMap(SuggestionCategory.init(rawValue:)) {
+                                    Text(category.displayName)
+                                        .font(.caption2.weight(.semibold))
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(.quaternary.opacity(0.6), in: Capsule())
+                                        .foregroundStyle(.secondary)
+                                }
                                 if pickedIDs.contains(evaluation.candidateId) {
                                     Text("PICKED")
                                         .font(.caption2.weight(.bold))
@@ -259,7 +323,7 @@ private struct AIScoresPanel: View {
     }
 }
 
-// MARK: - Card
+// MARK: - Video idea card
 
 private struct PostIdeaCard: View {
     let suggestion: PostSuggestionDTO
@@ -273,11 +337,6 @@ private struct PostIdeaCard: View {
                 thumbnail
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {
-                        Text("#\(suggestion.rank)")
-                            .font(.caption.weight(.bold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(.tint.opacity(0.15), in: Capsule())
                         Text(candidate.item.displayLabel)
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
@@ -287,6 +346,14 @@ private struct PostIdeaCard: View {
                                 .foregroundStyle(.tertiary)
                         }
                         .accessibilityLabel("Dismiss this idea")
+                    }
+                    if let clipRange = suggestion.clipRange {
+                        Label(
+                            "Best part: \(Formatting.duration(clipRange.lowerBound))–\(Formatting.duration(clipRange.upperBound))",
+                            systemImage: "scissors"
+                        )
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tint)
                     }
                     Text(suggestion.reason)
                         .font(.caption)
@@ -370,6 +437,102 @@ private struct PostIdeaCard: View {
     }
 }
 
+// MARK: - Photo slideshow card
+
+/// One card for the whole slideshow: swipeable photo strip, the rank-1
+/// caption, and a single share that exports a generated slideshow video.
+private struct SlideshowCard: View {
+    let entries: [PostSuggestionDTO]
+    let candidatesByID: [String: SuggestionCandidateBuilder.BuiltCandidate]
+    let onShare: () -> Void
+    let onDismiss: () -> Void
+
+    private var leadEntry: PostSuggestionDTO? { entries.first }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("\(entries.count) photos, ~2s each")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .accessibilityLabel("Dismiss the slideshow")
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(entries) { entry in
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8).fill(.thinMaterial)
+                            if let image = candidatesByID[entry.candidateId]?.previewImage {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                Image(systemName: "photo").foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(width: 84, height: 84)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(alignment: .topLeading) {
+                            Text("\(entry.rank)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.white)
+                                .padding(4)
+                                .background(.black.opacity(0.55), in: Circle())
+                                .padding(3)
+                        }
+                    }
+                }
+            }
+
+            if let lead = leadEntry {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(lead.caption)
+                        .font(.caption)
+                        .italic()
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !lead.hashtags.isEmpty {
+                        Text(lead.hashtags.map { $0.hasPrefix("#") ? $0 : "#\($0)" }.joined(separator: " "))
+                            .font(.caption2)
+                            .foregroundStyle(.tint)
+                    }
+                }
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            HStack {
+                if let lead = leadEntry {
+                    Button {
+                        let tags = lead.hashtags.map { $0.hasPrefix("#") ? $0 : "#\($0)" }.joined(separator: " ")
+                        UIPasteboard.general.string = tags.isEmpty ? lead.caption : "\(lead.caption)\n\(tags)"
+                    } label: {
+                        Label("Copy Caption", systemImage: "doc.on.doc")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                Button(action: onShare) {
+                    Label("Share Slideshow", systemImage: "square.and.arrow.up")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        }
+        .padding(12)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .contain)
+    }
+}
+
 // MARK: - Consent
 
 /// Plain-language consent sheet (task 0.2). Nothing is sent anywhere until
@@ -388,7 +551,7 @@ struct PostIdeasConsentSheet: View {
                     explanationRow(
                         icon: "photo.on.rectangle",
                         title: "A few small still frames leave your device",
-                        detail: "Up to 3 low-resolution snapshots per clip, plus song titles and the concert name, are sent to our server and an AI service to pick your best moments."
+                        detail: "Up to 4 low-resolution snapshots per clip, plus song titles and the concert name, are sent to our server and an AI service to pick your best moments."
                     )
                     explanationRow(
                         icon: "video.slash",

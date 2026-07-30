@@ -40,39 +40,71 @@ GOLDEN_DIR = pathlib.Path(__file__).parent / "golden"
 
 
 class DeterministicMockLLM:
-    """Ranks by metadata (rare > encore > identified video > rest) and emits
-    exactly the JSON shape the contract requires. Verifies the full assemble→
-    call→parse→validate pipeline without spending provider budget."""
+    """Categorizes by metadata and emits exactly the JSON shape the v2
+    contract requires (categories + caps + clip ranges). Verifies the full
+    assemble→call→parse→validate pipeline without spending provider budget."""
 
     async def rank(self, request: SuggestionsRequest, system_prompt: str, user_prompt: str) -> str:
-        count = min(3, len(request.candidates))
+        videos = [c for c in request.candidates if c.kind == "video"]
+        photos = [c for c in request.candidates if c.kind == "photo"]
+        used: set[str] = set()
+        suggestions: list[dict] = []
 
-        def score(candidate):
-            return (
-                (8 if candidate.isRareSong else 0)
-                + (4 if candidate.isEncore else 0)
-                + (2 if candidate.songTitle else 0)
-                + (1 if candidate.kind == "video" else 0)
-            )
-
-        ranked = sorted(request.candidates, key=score, reverse=True)[:count]
-        suggestions = [
-            {
+        def add(candidate, category: str, rank: int, reason: str) -> None:
+            used.add(candidate.id)
+            entry = {
                 "candidateId": candidate.id,
-                "rank": index + 1,
-                "reason": f"Mock pick: {candidate.songTitle or 'unlabeled media'} scored highest on rarity/encore metadata.",
+                "category": category,
+                "rank": rank,
+                "reason": reason,
                 "caption": f"that {candidate.songTitle or 'moment'} live >>>",
                 "hashtags": ["concert", "livemusic"],
             }
-            for index, candidate in enumerate(ranked)
-        ]
+            # Suggest a clip for long segments, mirroring the prompt rules.
+            start = candidate.segmentStartSeconds or 0.0
+            end = candidate.segmentEndSeconds or candidate.videoDurationSeconds or 0.0
+            if candidate.kind == "video" and end - start > 20:
+                entry["clipStartSeconds"] = start
+                entry["clipEndSeconds"] = min(start + 15.0, end)
+            suggestions.append(entry)
+
+        # artistFeature: flagged guests first (cap 1).
+        features = [c for c in videos if c.isGuestFeature]
+        if features:
+            add(features[0], "artistFeature", 1, "Mock: flagged guest feature.")
+
+        # bestQuality: top audioClarity (cap 2).
+        by_clarity = sorted(
+            (c for c in videos if c.id not in used),
+            key=lambda c: c.audioClarity or 0.0,
+            reverse=True,
+        )
+        for rank, candidate in enumerate(by_clarity[:2], start=1):
+            add(candidate, "bestQuality", rank, "Mock: highest audioClarity in the set.")
+
+        # uniqueMoment: rare/encore leftovers (cap 3).
+        unique = [c for c in videos if c.id not in used and (c.isRareSong or c.isEncore)]
+        for rank, candidate in enumerate(unique[:3], start=1):
+            add(candidate, "uniqueMoment", rank, "Mock: rare/encore flag marks a standout moment.")
+
+        # photoSlideshow: labeled photos (cap 6).
+        labeled_photos = [c for c in photos if c.songTitle] or photos
+        for rank, candidate in enumerate(labeled_photos[:6], start=1):
+            add(candidate, "photoSlideshow", rank, "Mock: labeled photo for the slideshow.")
+
+        if not suggestions and request.candidates:
+            first = request.candidates[0]
+            category = "bestQuality" if first.kind == "video" else "photoSlideshow"
+            add(first, category, 1, "Mock: fallback single pick.")
+
         payload = {"suggestions": suggestions}
         if request.debug:
             payload["evaluations"] = [
                 {
                     "candidateId": candidate.id,
-                    "score": min(100, score(candidate) * 10),
-                    "reasoning": "Mock score from rarity/encore/identified metadata.",
+                    "score": 90 if candidate.id in used else 40,
+                    "reasoning": "Mock score from category metadata.",
+                    "category": None,
                 }
                 for candidate in request.candidates
             ]
@@ -92,7 +124,6 @@ async def run_fixture(fixture: dict, client) -> dict:
     name = fixture["name"]
     request = SuggestionsRequest(**fixture["request"])
     valid_ids = {candidate.id for candidate in request.candidates}
-    expected_count = min(3, len(request.candidates))
 
     # Fresh guardrail state per fixture so one failure cannot cascade.
     suggestions_service.reset_budget_for_tests()
@@ -109,9 +140,11 @@ async def run_fixture(fixture: dict, client) -> dict:
         failures.append(f"pipeline raised {type(exc).__name__}: {exc}")
 
     if response is not None:
+        # Category caps/kinds/ranks are already hard-gated by the service's
+        # _parse_and_validate; the runner re-checks the basics.
         ids = [item.candidateId for item in response.suggestions]
-        if len(response.suggestions) != expected_count:
-            failures.append(f"expected {expected_count} suggestions, got {len(response.suggestions)}")
+        if not ids:
+            failures.append("no suggestions returned")
         if len(set(ids)) != len(ids):
             failures.append("duplicate candidate ids")
         for suggestion in response.suggestions:
@@ -121,8 +154,6 @@ async def run_fixture(fixture: dict, client) -> dict:
                 failures.append(f"empty caption for {suggestion.candidateId}")
             if len(suggestion.caption) > 300:
                 failures.append(f"caption over limit for {suggestion.candidateId}")
-        if sorted(item.rank for item in response.suggestions) != list(range(1, len(response.suggestions) + 1)):
-            failures.append(f"ranks not 1..N: {[item.rank for item in response.suggestions]}")
 
         # Advisory taste expectations: reported, never gated.
         expectations = fixture.get("expectations", {})
@@ -131,6 +162,12 @@ async def run_fixture(fixture: dict, client) -> dict:
             advisories.append(
                 f"none of the advisory picks {should_include} were chosen (got {ids})"
             )
+        for category, expected_ids in (expectations.get("category_should_include") or {}).items():
+            got = {s.candidateId for s in response.suggestions if s.category == category}
+            if not (set(expected_ids) & got):
+                advisories.append(
+                    f"{category}: none of {expected_ids} were chosen (got {sorted(got)})"
+                )
 
     return {"name": name, "passed": not failures, "failures": failures, "advisories": advisories, "response": response}
 
@@ -172,7 +209,10 @@ async def main() -> int:
             print(f"    advisory   : {advisory}")
         if result["response"] is not None:
             for suggestion in result["response"].suggestions:
-                print(f"    #{suggestion.rank} {suggestion.candidateId}: {suggestion.reason[:80]}")
+                clip = ""
+                if suggestion.clipStartSeconds is not None:
+                    clip = f" clip={suggestion.clipStartSeconds:.0f}-{suggestion.clipEndSeconds:.0f}s"
+                print(f"    [{suggestion.category} #{suggestion.rank}]{clip} {suggestion.candidateId}: {suggestion.reason[:70]}")
 
     print(f"\nvalidity rate: {passed}/{len(results)}")
     return 0 if passed == len(results) else 1

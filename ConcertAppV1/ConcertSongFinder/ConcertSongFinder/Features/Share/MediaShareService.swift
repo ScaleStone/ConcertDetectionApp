@@ -186,17 +186,27 @@ enum MediaShareService {
     static func prepareVideo(
         at sourceURL: URL,
         context: MediaShareContext,
-        includeCaption: Bool
+        includeCaption: Bool,
+        clipRange: ClosedRange<Double>? = nil
     ) async throws -> URL {
         if includeCaption, context.captionText != nil {
-            return try await exportCaptionedVideo(at: sourceURL, context: context)
+            return try await exportCaptionedVideo(at: sourceURL, context: context, clipRange: clipRange)
         }
-        return try await exportPassthroughVideo(at: sourceURL, context: context)
+        return try await exportPassthroughVideo(at: sourceURL, context: context, clipRange: clipRange)
+    }
+
+    private static func exportTimeRange(for clipRange: ClosedRange<Double>?, assetDuration: CMTime) -> CMTimeRange? {
+        guard let clipRange else { return nil }
+        let start = CMTime(seconds: max(0, clipRange.lowerBound), preferredTimescale: 600)
+        let end = CMTime(seconds: min(clipRange.upperBound, assetDuration.seconds), preferredTimescale: 600)
+        guard end > start else { return nil }
+        return CMTimeRange(start: start, end: end)
     }
 
     /// Fast path: no caption means no re-encode; passthrough export writes
-    /// the tagged filename + QuickTime metadata only.
-    private static func exportPassthroughVideo(at sourceURL: URL, context: MediaShareContext) async throws -> URL {
+    /// the tagged filename + QuickTime metadata only (and trims losslessly
+    /// when a clip range is requested).
+    private static func exportPassthroughVideo(at sourceURL: URL, context: MediaShareContext, clipRange: ClosedRange<Double>?) async throws -> URL {
         let asset = AVURLAsset(url: sourceURL)
         let destination = try makeDestinationURL(stem: context.fileNameStem, fileExtension: "mov")
 
@@ -206,6 +216,9 @@ enum MediaShareService {
             return destination
         }
         session.metadata = shareMetadata(for: context)
+        if let range = exportTimeRange(for: clipRange, assetDuration: try await asset.load(.duration)) {
+            session.timeRange = range
+        }
         do {
             try await session.export(to: destination, as: .mov)
         } catch {
@@ -220,7 +233,7 @@ enum MediaShareService {
 
     /// Caption path: re-encodes the video with the caption pill composited
     /// onto every frame so the song name survives social media uploads.
-    private static func exportCaptionedVideo(at sourceURL: URL, context: MediaShareContext) async throws -> URL {
+    private static func exportCaptionedVideo(at sourceURL: URL, context: MediaShareContext, clipRange: ClosedRange<Double>?) async throws -> URL {
         let asset = AVURLAsset(url: sourceURL)
         guard let caption = context.captionText,
               let videoTrack = try await asset.loadTracks(withMediaType: .video).first else {
@@ -265,6 +278,9 @@ enum MediaShareService {
         }
         session.videoComposition = composition
         session.metadata = shareMetadata(for: context)
+        if let range = exportTimeRange(for: clipRange, assetDuration: try await asset.load(.duration)) {
+            session.timeRange = range
+        }
 
         let destination = try makeDestinationURL(stem: context.fileNameStem, fileExtension: "mov")
         do {
@@ -332,6 +348,167 @@ enum MediaShareService {
         description.value = context.shareText.replacingOccurrences(of: "\n", with: " · ") as NSString
         items.append(description)
         return items
+    }
+
+    // MARK: - Photo slideshow
+
+    /// Renders the picked photos into a vertical (1080×1920) H.264 slideshow
+    /// video, ~2 seconds per photo, aspect-fit on black, shared through the
+    /// same pipeline as regular videos.
+    static func prepareSlideshow(
+        photoURLs: [URL],
+        context: MediaShareContext,
+        includeCaption: Bool
+    ) async throws -> URL {
+        guard !photoURLs.isEmpty else { throw MediaShareError.unreadableImage }
+        let caption = includeCaption ? context.captionText : nil
+        let destination = try makeDestinationURL(stem: "\(context.fileNameStem) Slideshow", fileExtension: "mov")
+
+        let renderSize = CGSize(width: 1080, height: 1920)
+        let secondsPerPhoto = 2.0
+
+        let writer = try AVAssetWriter(outputURL: destination, fileType: .mov)
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: renderSize.width,
+            AVVideoHeightKey: renderSize.height
+        ])
+        input.expectsMediaDataInRealTime = false
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+            assetWriterInput: input,
+            sourcePixelBufferAttributes: [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB,
+                kCVPixelBufferWidthKey as String: renderSize.width,
+                kCVPixelBufferHeightKey as String: renderSize.height
+            ]
+        )
+        writer.metadata = shareMetadata(for: context)
+        guard writer.canAdd(input) else { throw MediaShareError.exportFailed }
+        writer.add(input)
+        guard writer.startWriting() else { throw MediaShareError.exportFailed }
+        writer.startSession(atSourceTime: .zero)
+
+        let timescale: CMTimeScale = 600
+        for (index, url) in photoURLs.enumerated() {
+            guard let buffer = slideshowPixelBuffer(
+                photoURL: url,
+                renderSize: renderSize,
+                caption: caption,
+                pool: adaptor.pixelBufferPool
+            ) else {
+                AppLog.concertLibrary.error("Slideshow frame skipped; photo unreadable file=\(url.lastPathComponent, privacy: .public)")
+                continue
+            }
+            while !input.isReadyForMoreMediaData {
+                try await Task.sleep(nanoseconds: 20_000_000)
+            }
+            let time = CMTime(seconds: Double(index) * secondsPerPhoto, preferredTimescale: timescale)
+            guard adaptor.append(buffer, withPresentationTime: time) else {
+                writer.cancelWriting()
+                throw MediaShareError.exportFailed
+            }
+        }
+
+        input.markAsFinished()
+        writer.endSession(atSourceTime: CMTime(seconds: Double(photoURLs.count) * secondsPerPhoto, preferredTimescale: timescale))
+        await writer.finishWriting()
+        guard writer.status == .completed else {
+            AppLog.concertLibrary.error("Slideshow export failed status=\(writer.status.rawValue, privacy: .public) error=\(writer.error?.localizedDescription ?? "none", privacy: .public)")
+            throw MediaShareError.exportFailed
+        }
+        return destination
+    }
+
+    /// Downsampled photo drawn aspect-fit on a black canvas, with the
+    /// caption pill burned in when requested.
+    private static func slideshowPixelBuffer(
+        photoURL: URL,
+        renderSize: CGSize,
+        caption: String?,
+        pool: CVPixelBufferPool?
+    ) -> CVPixelBuffer? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(renderSize.width, renderSize.height)
+        ]
+        guard let source = CGImageSourceCreateWithURL(photoURL as CFURL, nil),
+              let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+
+        var pixelBuffer: CVPixelBuffer?
+        if let pool {
+            CVPixelBufferPoolCreatePixelBuffer(nil, pool, &pixelBuffer)
+        }
+        if pixelBuffer == nil {
+            CVPixelBufferCreate(
+                nil, Int(renderSize.width), Int(renderSize.height),
+                kCVPixelFormatType_32ARGB,
+                [kCVPixelBufferCGImageCompatibilityKey: true] as CFDictionary,
+                &pixelBuffer
+            )
+        }
+        guard let buffer = pixelBuffer else { return nil }
+
+        CVPixelBufferLockBaseAddress(buffer, [])
+        defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
+        guard let cgContext = CGContext(
+            data: CVPixelBufferGetBaseAddress(buffer),
+            width: Int(renderSize.width),
+            height: Int(renderSize.height),
+            bitsPerComponent: 8,
+            bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue
+        ) else { return nil }
+
+        UIGraphicsPushContext(cgContext)
+        defer { UIGraphicsPopContext() }
+        // CGContext origin is bottom-left; flip into UIKit space for drawing.
+        cgContext.translateBy(x: 0, y: renderSize.height)
+        cgContext.scaleBy(x: 1, y: -1)
+
+        UIColor.black.setFill()
+        UIRectFill(CGRect(origin: .zero, size: renderSize))
+
+        let image = UIImage(cgImage: cgImage)
+        let scale = min(renderSize.width / image.size.width, renderSize.height / image.size.height)
+        let drawSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let drawOrigin = CGPoint(
+            x: (renderSize.width - drawSize.width) / 2,
+            y: (renderSize.height - drawSize.height) / 2
+        )
+        image.draw(in: CGRect(origin: drawOrigin, size: drawSize))
+
+        if let caption {
+            let fontSize = max(18, renderSize.width * 0.032)
+            let font = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+            let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor.white]
+            let textSize = (caption as NSString).size(withAttributes: attributes)
+            let horizontalPadding = fontSize * 0.7
+            let verticalPadding = fontSize * 0.45
+            let margin = fontSize * 0.9
+            let pillSize = CGSize(
+                width: min(textSize.width + horizontalPadding * 2, renderSize.width - margin * 2),
+                height: textSize.height + verticalPadding * 2
+            )
+            let pillRect = CGRect(
+                x: margin,
+                y: renderSize.height - pillSize.height - margin,
+                width: pillSize.width,
+                height: pillSize.height
+            )
+            let pill = UIBezierPath(roundedRect: pillRect, cornerRadius: pillSize.height / 2)
+            UIColor.black.withAlphaComponent(0.55).setFill()
+            pill.fill()
+            (caption as NSString).draw(
+                in: pillRect.insetBy(dx: horizontalPadding, dy: verticalPadding),
+                withAttributes: attributes
+            )
+        }
+
+        return buffer
     }
 
     private static func makeDestinationURL(stem: String, fileExtension: String) throws -> URL {

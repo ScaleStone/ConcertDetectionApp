@@ -13,6 +13,14 @@ struct SuggestionCandidateDTO: Encodable {
     let setlistPosition: Int?
     let durationSeconds: Double?
     let contextNotes: String?
+    /// 0-1 proxy for clean audio (Shazam matched-duration ratio).
+    let audioClarity: Double?
+    let isGuestFeature: Bool
+    let featuredArtist: String?
+    /// Segment bounds in the video file's timeline (clip-range defaults).
+    let segmentStartSeconds: Double?
+    let segmentEndSeconds: Double?
+    let videoDurationSeconds: Double?
     let frames: [String]
 }
 
@@ -20,25 +28,68 @@ struct SuggestionsRequestDTO: Encodable {
     let concertTitle: String
     let venue: String?
     let eventDate: String?
+    let headlinerArtist: String?
     let candidates: [SuggestionCandidateDTO]
     /// Testing: ask the backend for a scored evaluation of every candidate.
     let debug: Bool
 }
 
+/// Suggestion categories with per-category caps enforced by the backend.
+enum SuggestionCategory: String, Decodable, CaseIterable {
+    case bestQuality
+    case uniqueMoment
+    case artistFeature
+    case photoSlideshow
+
+    var displayName: String {
+        switch self {
+        case .bestQuality: return "Best Quality"
+        case .uniqueMoment: return "Unique Moments"
+        case .artistFeature: return "Artist Feature"
+        case .photoSlideshow: return "Photo Slideshow"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .bestQuality: return "sparkles.tv"
+        case .uniqueMoment: return "flame"
+        case .artistFeature: return "person.2.fill"
+        case .photoSlideshow: return "photo.stack"
+        }
+    }
+
+    /// Display order in the Post Ideas section.
+    static let displayOrder: [SuggestionCategory] = [.artistFeature, .uniqueMoment, .bestQuality, .photoSlideshow]
+}
+
 struct PostSuggestionDTO: Decodable, Identifiable, Hashable {
     let candidateId: String
+    let category: String
     let rank: Int
     let reason: String
     let caption: String
     let hashtags: [String]
+    let clipStartSeconds: Double?
+    let clipEndSeconds: Double?
 
     var id: String { candidateId }
+
+    var suggestionCategory: SuggestionCategory? {
+        SuggestionCategory(rawValue: category)
+    }
+
+    var clipRange: ClosedRange<Double>? {
+        guard let clipStartSeconds, let clipEndSeconds, clipEndSeconds > clipStartSeconds else { return nil }
+        return clipStartSeconds...clipEndSeconds
+    }
 }
 
 struct CandidateEvaluationDTO: Decodable, Identifiable, Hashable {
     let candidateId: String
     let score: Int
     let reasoning: String
+    let category: String?
 
     var id: String { candidateId }
 }
@@ -94,6 +145,7 @@ final class SuggestionService: ObservableObject {
             concertTitle: concert.displayTitle,
             venue: concert.selectedSetlist?.venueName ?? concert.selectedConcert?.venueName,
             eventDate: concert.concertDate.map { Self.dateOnlyFormatter.string(from: $0) },
+            headlinerArtist: concert.selectedSetlist?.artistName ?? concert.selectedConcert?.artistName,
             candidates: built.map(\.dto),
             debug: includeScores
         )
