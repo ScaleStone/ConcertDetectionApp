@@ -409,7 +409,7 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
                 clipProgress
                     .frame(height: 3)
                     .padding(.horizontal, 18)
-                    .padding(.bottom, 118)
+                    .padding(.bottom, 76)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
 

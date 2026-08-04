@@ -14,8 +14,7 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             FloatingTabBar(selectedTab: $selectedTab)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 18)
+                .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .ignoresSafeArea(.container, edges: .bottom)
                 .ignoresSafeArea(.keyboard)
@@ -153,7 +152,7 @@ private struct FloatingTabBar: View {
     private let tabs: [AppTab] = [.library, .clips, .upload, .analysis, .profile]
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 9) {
             ForEach(tabs, id: \.self) { tab in
                 Button {
                     withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
@@ -167,9 +166,9 @@ private struct FloatingTabBar: View {
                 .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 15)
-        .padding(.vertical, 8)
-        .frame(height: 66)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .frame(height: 48)
         .background {
             Capsule()
                 .fill(.ultraThinMaterial)
@@ -181,7 +180,7 @@ private struct FloatingTabBar: View {
                     Capsule()
                         .stroke(CSFDesign.textPrimary.opacity(0.16), lineWidth: 1)
                 }
-                .shadow(color: .black.opacity(0.34), radius: 24, y: 14)
+                .shadow(color: .black.opacity(0.30), radius: 16, y: 8)
         }
     }
 
@@ -193,24 +192,24 @@ private struct FloatingTabBar: View {
             if isSelected {
                 Capsule()
                     .fill(CSFDesign.textPrimary.opacity(tab == .upload ? 0.18 : 0.14))
+                    .frame(width: tab == .upload ? 58 : 52, height: 36)
                     .matchedGeometryEffect(id: "selectedTab", in: selectionNamespace)
             }
 
             Image(systemName: tab.icon)
-                .font(.system(size: tab == .upload ? 24 : 25, weight: .semibold))
+                .font(.system(size: tab == .upload ? 20 : 21, weight: .semibold))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(tab == .upload && isSelected ? CSFDesign.primary : CSFDesign.textPrimary)
 
             if tab == .clips {
                 Circle()
                     .fill(CSFDesign.primary)
-                    .frame(width: 7, height: 7)
-                    .offset(x: 21, y: 16)
+                    .frame(width: 5, height: 5)
+                    .offset(x: 17, y: 13)
                     .opacity(isSelected ? 1 : 0.88)
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 50)
+        .frame(width: tab == .upload ? 58 : 50, height: 38)
         .contentShape(Rectangle())
     }
 }
