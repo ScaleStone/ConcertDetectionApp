@@ -90,7 +90,6 @@
 		3EC659A241C9F0F5E2D966C7 /* ConcertSongFinder.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ConcertSongFinder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		457AB4C20AFC7C1677FAD536 /* DemoClip07.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = DemoClip07.mov; sourceTree = "<group>"; };
 		4CDD5680AEF36D22E93B965A /* AnalysisDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisDashboardView.swift; sourceTree = "<group>"; };
-		5E42D04CC1509E68718E5932 /* ConcertAPP 2 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "ConcertAPP 2"; path = .; sourceTree = SOURCE_ROOT; };
 		610AB0FF0D499D4F48A4466D /* BackendAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendAPIClient.swift; sourceTree = "<group>"; };
 		65EF461B25ACCE9BDCD9C360 /* LyricMatchingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricMatchingTests.swift; sourceTree = "<group>"; };
 		65F0E7784FE5A49FE9C2316C /* DemoClip03.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = DemoClip03.mov; sourceTree = "<group>"; };
@@ -104,6 +103,7 @@
 		9CB1CD66A23740A8429AC690 /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
 		9E5573896FB495812983ABF3 /* AppleSpeechTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSpeechTranscriptionService.swift; sourceTree = "<group>"; };
 		A10CECBE5AE4D74D5BFBEF9F /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
+		A2DC7BF5311983CB449BCD87 /* ConcertSongFinder */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ConcertSongFinder; path = .; sourceTree = SOURCE_ROOT; };
 		A6C08126EF20D56E4CC719E5 /* DemoClip02.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = DemoClip02.mov; sourceTree = "<group>"; };
 		A81312B9F575611E927B8E74 /* SongClipsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongClipsView.swift; sourceTree = "<group>"; };
 		AA3B0C5830FA55C7439037F2 /* MediaClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaClassificationTests.swift; sourceTree = "<group>"; };
@@ -312,7 +312,7 @@
 		9206B0BE0FF62E83A0229690 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				5E42D04CC1509E68718E5932 /* ConcertAPP 2 */,
+				A2DC7BF5311983CB449BCD87 /* ConcertSongFinder */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
