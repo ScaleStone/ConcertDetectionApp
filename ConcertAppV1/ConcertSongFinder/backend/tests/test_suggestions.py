@@ -446,3 +446,38 @@ def test_gemini_fallback_chain_configurable_and_deduplicated(monkeypatch) -> Non
     assert text == "ok"
     # Primary deduplicated out of the fallback list.
     assert "custom-model:" in fake.urls[1]
+
+
+def test_gemini_falls_back_on_transient_non_429_errors(monkeypatch) -> None:
+    # Observed in production: free-tier keys intermittently return empty
+    # 404s; the chain must keep trying rather than aborting with 502.
+    settings = Settings(llm_api_key="AQ.test")
+    fake, text = run_gemini_rank(
+        monkeypatch,
+        [FakeHTTPResponse(404), FakeHTTPResponse(200, gemini_ok_payload("recovered"))],
+        settings,
+    )
+    assert text == "recovered"
+    assert len(fake.urls) == 2
+
+
+def test_gemini_mixed_failures_with_throttle_reports_429(monkeypatch) -> None:
+    from fastapi import HTTPException
+
+    settings = Settings(llm_api_key="AQ.test")
+    with pytest.raises(HTTPException) as excinfo:
+        run_gemini_rank(
+            monkeypatch,
+            [FakeHTTPResponse(404), FakeHTTPResponse(429), FakeHTTPResponse(404)],
+            settings,
+        )
+    assert excinfo.value.status_code == 429
+
+
+def test_gemini_all_non_throttle_failures_report_502(monkeypatch) -> None:
+    from fastapi import HTTPException
+
+    settings = Settings(llm_api_key="AQ.test")
+    with pytest.raises(HTTPException) as excinfo:
+        run_gemini_rank(monkeypatch, [FakeHTTPResponse(404)] * 3, settings)
+    assert excinfo.value.status_code == 502

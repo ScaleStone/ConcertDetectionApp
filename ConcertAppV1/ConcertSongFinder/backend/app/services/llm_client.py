@@ -141,6 +141,9 @@ class GeminiSuggestionClient:
         }
 
         client = await get_shared_client()
+        # Free-tier keys emit transient failures (429s, and empty-body 404s
+        # observed under quota pressure), so ANY per-model failure moves to
+        # the next model in the chain rather than aborting the request.
         rate_limited = False
         for model in self._model_chain():
             try:
@@ -152,20 +155,16 @@ class GeminiSuggestionClient:
                 )
             except Exception as exc:  # timeout / network
                 logger.error("LLM request failed transport model=%s error=%s", model, type(exc).__name__)
-                raise HTTPException(
-                    status_code=502,
-                    detail={"code": "suggestions_provider_error", "message": "The suggestions provider could not be reached."},
-                )
+                continue
 
             if response.status_code == 429:
-                # This model's quota bucket is exhausted; try the next one.
                 rate_limited = True
                 logger.warning("LLM model rate limited, falling back model=%s", model)
                 continue
             if response.status_code >= 400:
                 # Log status only; never log request bodies (they contain frames).
                 logger.error("LLM provider error model=%s status=%s", model, response.status_code)
-                raise HTTPException(status_code=502, detail={"code": "suggestions_provider_error", "message": "The suggestions provider returned an error."})
+                continue
 
             payload = response.json()
             try:
@@ -180,11 +179,15 @@ class GeminiSuggestionClient:
                 content_parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
                 return "".join(part.get("text", "") for part in content_parts)
             except (KeyError, AttributeError, TypeError, IndexError):
-                raise HTTPException(status_code=502, detail={"code": "suggestions_provider_error", "message": "The suggestions provider returned an invalid response."})
+                logger.error("LLM response unparseable model=%s", model)
+                continue
 
-        assert rate_limited
-        logger.error("LLM all models rate limited chain=%s", ",".join(self._model_chain()))
-        raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "Suggestions are temporarily rate limited."})
+        logger.error("LLM all models failed chain=%s rate_limited=%s", ",".join(self._model_chain()), rate_limited)
+        if rate_limited:
+            # At least one model was explicitly throttled: tell the client to
+            # wait rather than reporting a generic provider failure.
+            raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "Suggestions are temporarily rate limited."})
+        raise HTTPException(status_code=502, detail={"code": "suggestions_provider_error", "message": "The suggestions provider returned an error."})
 
     def _model_chain(self) -> list[str]:
         primary = self.settings.llm_model or DEFAULT_GEMINI_MODEL
