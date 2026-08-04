@@ -384,9 +384,11 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                 clipProgress
-                    .padding(.horizontal, 48)
-                    .padding(.bottom, 112)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .frame(width: 22, height: 330)
+                    .padding(.trailing, 16)
+                    .padding(.top, 168)
+                    .padding(.bottom, 138)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
             }
 
             VStack {
@@ -498,8 +500,8 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
                 continuousClipProgress
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 9)
         .background(.ultraThinMaterial, in: Capsule())
         .overlay {
             Capsule()
@@ -509,13 +511,13 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
     }
 
     private var segmentedClipProgress: some View {
-        HStack(spacing: 5) {
+        VStack(spacing: 5) {
             ForEach(1...max(clipTotal, 1), id: \.self) { index in
                 Capsule()
                     .fill(index <= clipIndex ? item.tint.opacity(0.95) : CSFDesign.textPrimary.opacity(0.20))
-                    .frame(height: index == clipIndex ? 4 : 3)
-                    .frame(maxWidth: .infinity)
-                    .shadow(color: index == clipIndex ? item.tint.opacity(0.36) : .clear, radius: 8, y: 2)
+                    .frame(width: index == clipIndex ? 4 : 3)
+                    .frame(maxHeight: .infinity)
+                    .shadow(color: index == clipIndex ? item.tint.opacity(0.36) : .clear, radius: 8, x: -2)
             }
         }
     }
@@ -523,22 +525,22 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
     private var continuousClipProgress: some View {
         GeometryReader { proxy in
             let progress = min(max(CGFloat(clipIndex) / CGFloat(max(clipTotal, 1)), 0), 1)
-            ZStack(alignment: .leading) {
+            ZStack(alignment: .bottom) {
                 Capsule()
                     .fill(CSFDesign.textPrimary.opacity(0.18))
                 Capsule()
                     .fill(
                         LinearGradient(
                             colors: [item.tint, CSFDesign.violet],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                            startPoint: .bottom,
+                            endPoint: .top
                         )
                     )
-                    .frame(width: max(18, proxy.size.width * progress))
-                    .shadow(color: item.tint.opacity(0.38), radius: 8, y: 2)
+                    .frame(height: max(18, proxy.size.height * progress))
+                    .shadow(color: item.tint.opacity(0.38), radius: 8, x: -2)
             }
         }
-        .frame(height: 4)
+        .frame(width: 4)
     }
 
     private func stageLight(color: Color, rotation: Double, xOffset: CGFloat) -> some View {
@@ -734,12 +736,22 @@ private struct LoopingDemoVideoPlayer: UIViewRepresentable {
 
             let item = AVPlayerItem(url: url)
             let queuePlayer = AVQueuePlayer()
-            queuePlayer.isMuted = true
+            configureAudioPlayback()
+            queuePlayer.isMuted = false
+            queuePlayer.volume = 1
             queuePlayer.actionAtItemEnd = .none
             looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
             player = queuePlayer
             view.playerLayer.player = queuePlayer
             queuePlayer.play()
+        }
+
+        private func configureAudioPlayback() {
+            #if os(iOS)
+            let audioSession = AVAudioSession.sharedInstance()
+            try? audioSession.setCategory(.playback, mode: .moviePlayback, options: [])
+            try? audioSession.setActive(true)
+            #endif
         }
     }
 }
