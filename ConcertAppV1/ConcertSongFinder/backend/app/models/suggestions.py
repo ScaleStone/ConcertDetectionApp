@@ -99,14 +99,6 @@ class CandidateEvaluation(BaseModel):
     category: str | None = None
 
 
-class CandidateEvaluation(BaseModel):
-    """Per-candidate score + reasoning, returned only for debug requests."""
-
-    candidateId: str
-    score: int = Field(ge=0, le=100)
-    reasoning: str = Field(max_length=500)
-
-
 class SuggestionsResponse(BaseModel):
     suggestions: list[PostSuggestion]
     promptVersion: str
