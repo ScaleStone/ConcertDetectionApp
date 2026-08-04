@@ -14,9 +14,8 @@ struct MyConcertsView: View {
     private var filteredConcerts: [ConcertRecord] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return concerts }
-        return concerts.filter {
-            $0.displayTitle.localizedCaseInsensitiveContains(query)
-                || $0.displaySubtitle.localizedCaseInsensitiveContains(query)
+        return concerts.filter { concert in
+            concertMatchesSearch(concert, query: query)
         }
     }
 
@@ -30,7 +29,7 @@ struct MyConcertsView: View {
                 Spacer()
             }
 
-            CSFSearchField(text: $searchText, prompt: "Search artist or venue")
+            CSFSearchField(text: $searchText, prompt: "Search song, artist, or venue")
 
             if let errorMessage {
                 CSFCard {
@@ -53,7 +52,7 @@ struct MyConcertsView: View {
                     CSFHeroLead(
                         icon: "music.mic",
                         title: searchText.isEmpty ? "No concerts yet" : "No matching concerts",
-                        subtitle: searchText.isEmpty ? "Upload concert media to create your first concert library entry." : "Try another artist, venue, or date.",
+                        subtitle: searchText.isEmpty ? "Upload concert media to create your first concert library entry. After analysis, search here by song name across every concert." : "Try another song, artist, venue, or date.",
                         tint: CSFDesign.violet
                     )
                 }
@@ -61,7 +60,7 @@ struct MyConcertsView: View {
                 VStack(spacing: 14) {
                     ForEach(filteredConcerts) { concert in
                         NavigationLink { ConcertDetailView(concert: concert) } label: {
-                            ConcertArchiveCard(concert: concert) {
+                            ConcertArchiveCard(concert: concert, matchingSongs: matchingSongSummaries(for: concert)) {
                                 deleteConcert(concert)
                             }
                         }
@@ -86,6 +85,88 @@ struct MyConcertsView: View {
             errorMessage = "Could not load My Concerts."
             AppLog.concertLibrary.error("My Concerts load failed error=\(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    private func concertMatchesSearch(_ concert: ConcertRecord, query: String) -> Bool {
+        concert.displayTitle.localizedCaseInsensitiveContains(query)
+            || concert.displaySubtitle.localizedCaseInsensitiveContains(query)
+            || concert.selectedConcert?.city?.localizedCaseInsensitiveContains(query) == true
+            || songSearchStrings(for: concert).contains { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    private func matchingSongSummaries(for concert: ConcertRecord) -> [String] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return [] }
+
+        var seen = Set<String>()
+        var summaries: [String] = []
+
+        func addSong(title: String, artist: String?) {
+            let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { return }
+            let artist = artist?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let summary = artist.map { "\(title) - \($0)" } ?? title
+            guard summary.localizedCaseInsensitiveContains(query) else { return }
+            let key = summary.lowercased()
+            guard seen.insert(key).inserted else { return }
+            summaries.append(summary)
+        }
+
+        for occurrence in concert.selectedSetlist?.occurrences ?? [] {
+            addSong(title: occurrence.title, artist: occurrence.artist)
+        }
+        for video in concert.videos {
+            for segment in video.segments {
+                addSong(title: segment.primaryCandidate?.song.title ?? "", artist: segment.primaryCandidate?.song.artist)
+                for candidate in segment.alternativeCandidates + segment.evidence.boundedCandidateOptions {
+                    addSong(title: candidate.song.title, artist: candidate.song.artist)
+                }
+            }
+        }
+        for photo in concert.photos {
+            addSong(title: photo.primaryCandidate?.song.title ?? "", artist: photo.primaryCandidate?.song.artist)
+            for candidate in photo.alternativeCandidates + photo.evidence.boundedCandidateOptions {
+                addSong(title: candidate.song.title, artist: candidate.song.artist)
+            }
+        }
+
+        return Array(summaries.prefix(3))
+    }
+
+    private func songSearchStrings(for concert: ConcertRecord) -> [String] {
+        var values: [String] = []
+
+        func addSong(_ song: SongIdentity?) {
+            guard let song else { return }
+            values.append(song.title)
+            values.append(song.artist)
+            values.append("\(song.title) \(song.artist)")
+        }
+
+        for occurrence in concert.selectedSetlist?.occurrences ?? [] {
+            values.append(occurrence.title)
+            values.append(occurrence.artist)
+            values.append("\(occurrence.title) \(occurrence.artist)")
+            if let notes = occurrence.notes {
+                values.append(notes)
+            }
+        }
+        for video in concert.videos {
+            for segment in video.segments {
+                addSong(segment.primaryCandidate?.song)
+                for candidate in segment.alternativeCandidates + segment.evidence.boundedCandidateOptions {
+                    addSong(candidate.song)
+                }
+            }
+        }
+        for photo in concert.photos {
+            addSong(photo.primaryCandidate?.song)
+            for candidate in photo.alternativeCandidates + photo.evidence.boundedCandidateOptions {
+                addSong(candidate.song)
+            }
+        }
+
+        return values
     }
 
     private func deleteConcerts(at offsets: IndexSet) {
@@ -198,6 +279,7 @@ private struct InProgressConcertCard: View {
 
 private struct ConcertArchiveCard: View {
     let concert: ConcertRecord
+    var matchingSongs: [String] = []
     let onDelete: () -> Void
 
     var body: some View {
@@ -242,6 +324,21 @@ private struct ConcertArchiveCard: View {
                 }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(CSFDesign.textMuted)
+
+                if !matchingSongs.isEmpty {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Label("Matched songs", systemImage: "magnifyingglass")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(CSFDesign.primary)
+                        ForEach(matchingSongs, id: \.self) { song in
+                            Text(song)
+                                .font(.caption)
+                                .foregroundStyle(CSFDesign.textPrimary.opacity(0.78))
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
             }
         }
         .padding(14)
