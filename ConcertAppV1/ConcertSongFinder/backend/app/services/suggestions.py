@@ -21,39 +21,71 @@ from datetime import date
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app.models.suggestions import CandidateEvaluation, PostSuggestion, SuggestionsRequest, SuggestionsResponse
+from app.models.suggestions import (
+    CATEGORY_CAPS,
+    VIDEO_CATEGORIES,
+    CandidateEvaluation,
+    PostSuggestion,
+    SuggestionsRequest,
+    SuggestionsResponse,
+)
 from app.services.llm_client import SuggestionLLMClient
 from app.services.trend_brief import TrendBrief
 
 logger = logging.getLogger("concert_song_finder.suggestions")
 
-PROMPT_VERSION = "core-v1"
+PROMPT_VERSION = "core-v2"
 
 CORE_PROMPT = """You are an expert at judging which fan-shot concert moments perform well on TikTok.
 
-Timeless criteria, in priority order:
-1. RARITY of the moment beats everything: surprise songs, one-time guests,
-   candidates marked isRareSong or isEncore, anything a viewer could not see
-   at another show.
-2. HUMAN moments beat pure performance: artist-fan interaction, ad-libs and
-   speech between songs, visible emotional reactions, whole-crowd singalongs.
-3. When it is performance footage, a RECOGNIZABLE song captured at its peak
-   (chorus/drop) beats album deep cuts mid-verse.
-4. The first seconds must land: prefer clips that open inside the moment.
-5. Visual quality is only a tiebreaker; a shaky clip of an extraordinary
-   moment beats a stable clip of an ordinary one.
+You sort candidate media into FOUR CATEGORIES with hard caps. A category may
+be EMPTY if nothing genuinely qualifies — never force-fill.
 
-Combine these with the CURRENT TREND BRIEF provided by the user; when they
-conflict, rarity and human moments still win.
+1. bestQuality (max 2, videos only): the cleanest watchable footage.
+   Criteria in priority order: the artist is clearly visible and identifiable
+   (a distant jumbotron speck does NOT count); stable framing (compare the
+   frames of the same clip — big differences mean shaky footage); good
+   exposure for a dark venue; high audioClarity metadata (it is a measured
+   proxy for clean audio — trust it, you cannot hear the clips).
+
+2. uniqueMoment (max 3, videos only): clips that stand out FROM THE OTHER
+   CANDIDATES IN THIS SET: a sea of phone flashlights, a mosh pit or circle
+   opening, pyro/confetti, artist walking into the crowd, a visible
+   whole-crowd singalong, anything visibly different from the rest.
+   Your reason MUST name the unique element. Chaotic footage with no
+   discernible subject is noise, not uniqueness — exclude it.
+
+3. artistFeature (max 1, videos only): a guest artist joining mid-show.
+   Strongly prefer candidates flagged isGuestFeature (detected from song
+   recognition and setlist notes). Without a flag, only assign this category
+   if the frames clearly show a second performer; otherwise leave it empty.
+
+4. photoSlideshow (max 6, photos only): the sharpest, best-exposed photos
+   where the artist or moment is clearly visible; favor visual variety
+   across the picks. Rank them in slideshow order; the rank-1 caption is
+   used for the whole slideshow.
+
+Clip ranges: any video suggestion may include clipStartSeconds/clipEndSeconds
+picking the strongest 8-20 second stretch WITHIN the candidate's provided
+segment bounds (segmentStartSeconds..segmentEndSeconds, or 0..duration when
+absent). Include one whenever the source runs longer than ~20 seconds.
+
+Combine these criteria with the CURRENT TREND BRIEF provided by the user for
+caption style and format preferences.
 
 You will receive candidate media (keyframes plus structured metadata).
 Respond with ONLY a JSON object, no markdown fences, exactly this shape:
-{"suggestions": [{"candidateId": "<id from the provided list>", "rank": 1,
-"reason": "<one sentence, why this will perform>", "caption": "<ready-to-post
-caption in current TikTok style>", "hashtags": ["tag1", "tag2"]}]}
-Rules: exactly the requested number of suggestions; candidateId MUST be one
-of the provided ids; never invent ids; ranks 1..N; captions under 200
-characters."""
+{"suggestions": [{"candidateId": "<id from the provided list>",
+"category": "bestQuality|uniqueMoment|artistFeature|photoSlideshow",
+"rank": 1, "reason": "<one sentence, why this earns its category>",
+"caption": "<ready-to-post caption in current TikTok style>",
+"hashtags": ["tag1", "tag2"],
+"clipStartSeconds": null, "clipEndSeconds": null}]}
+Rules: candidateId MUST be one of the provided ids; never invent ids; a
+candidate appears at most once across all categories; respect the caps;
+rank is 1..N within each category; videos never go in photoSlideshow and
+photos never go in video categories; at least one suggestion overall;
+captions under 200 characters."""
 
 # --- Daily budget -----------------------------------------------------------
 _budget_day: date | None = None
@@ -102,10 +134,11 @@ def reset_breaker_for_tests() -> None:
 
 
 # --- Generation -------------------------------------------------------------
-def _user_prompt(request: SuggestionsRequest, brief: TrendBrief, count: int) -> str:
+def _user_prompt(request: SuggestionsRequest, brief: TrendBrief) -> str:
     lines = [
         f"Concert: {request.concertTitle}",
         f"Venue: {request.venue or 'unknown'} | Date: {request.eventDate or 'unknown'}",
+        f"Headliner: {request.headlinerArtist or 'unknown'}",
         "",
         "CURRENT TREND BRIEF:",
         brief.text,
@@ -123,30 +156,55 @@ def _user_prompt(request: SuggestionsRequest, brief: TrendBrief, count: int) -> 
             parts.append("ENCORE")
         if candidate.isRareSong:
             parts.append("RARE-SONG")
+        if candidate.isGuestFeature:
+            parts.append(f"GUEST-FEATURE({candidate.featuredArtist or 'unknown guest'})")
+        if candidate.audioClarity is not None:
+            parts.append(f"audioClarity={candidate.audioClarity:.2f}")
         if candidate.setlistPosition is not None:
             parts.append(f"setlistPosition={candidate.setlistPosition}")
         if candidate.durationSeconds is not None:
             parts.append(f"duration={candidate.durationSeconds:.0f}s")
+        if candidate.segmentStartSeconds is not None and candidate.segmentEndSeconds is not None:
+            parts.append(f"segmentBounds={candidate.segmentStartSeconds:.0f}s-{candidate.segmentEndSeconds:.0f}s")
+        if candidate.videoDurationSeconds is not None:
+            parts.append(f"videoDuration={candidate.videoDurationSeconds:.0f}s")
         if candidate.contextNotes:
             parts.append(f"notes={candidate.contextNotes}")
         lines.append(" ".join(parts))
     lines.append("")
-    lines.append(f"Pick the top {count} and respond with the JSON object only.")
+    lines.append("Categorize per the rules and respond with the JSON object only.")
     if request.debug:
         lines.append(
             'DEBUG MODE: additionally include an "evaluations" array in the same '
             "JSON object with an entry for EVERY candidate listed above (no "
             "omissions, no duplicates), each shaped as "
             '{"candidateId": "<id>", "score": <integer 0-100>, "reasoning": '
-            '"<one or two sentences explaining the score against the criteria>"}. '
-            "Scores must be consistent with your ranking: suggested candidates "
+            '"<one or two sentences explaining the score against the criteria>", '
+            '"category": "<the best-fitting category for this candidate, or null>"}. '
+            "Scores must be consistent with your picks: suggested candidates "
             "score highest."
         )
     return "\n".join(lines)
 
 
+def _validate_clip_range(suggestion: PostSuggestion, candidate) -> None:
+    start, end = suggestion.clipStartSeconds, suggestion.clipEndSeconds
+    if start is None and end is None:
+        return
+    if start is None or end is None:
+        raise SuggestionValidationError(f"partial clip range on {suggestion.candidateId!r}")
+    if candidate.kind != "video":
+        raise SuggestionValidationError(f"clip range on non-video {suggestion.candidateId!r}")
+    if end <= start:
+        raise SuggestionValidationError(f"empty clip range on {suggestion.candidateId!r}")
+    limit = candidate.videoDurationSeconds
+    # Half-second tolerance for float rounding at the tail.
+    if limit is not None and end > limit + 0.5:
+        raise SuggestionValidationError(f"clip range exceeds video duration on {suggestion.candidateId!r}")
+
+
 def _parse_and_validate(
-    raw: str, request: SuggestionsRequest, count: int
+    raw: str, request: SuggestionsRequest
 ) -> tuple[list[PostSuggestion], list[CandidateEvaluation] | None]:
     text = raw.strip()
     # Tolerate accidental markdown fences.
@@ -158,16 +216,36 @@ def _parse_and_validate(
     except (json.JSONDecodeError, KeyError, TypeError, ValidationError) as exc:
         raise SuggestionValidationError(f"unparseable response: {type(exc).__name__}")
 
-    valid_ids = {candidate.id for candidate in request.candidates}
+    if not suggestions:
+        raise SuggestionValidationError("no suggestions returned")
+
+    candidates_by_id = {candidate.id: candidate for candidate in request.candidates}
     seen_ids: set[str] = set()
+    by_category: dict[str, list[PostSuggestion]] = {}
     for suggestion in suggestions:
-        if suggestion.candidateId not in valid_ids:
+        candidate = candidates_by_id.get(suggestion.candidateId)
+        if candidate is None:
             raise SuggestionValidationError(f"unknown candidateId {suggestion.candidateId!r}")
         if suggestion.candidateId in seen_ids:
             raise SuggestionValidationError("duplicate candidateId")
         seen_ids.add(suggestion.candidateId)
-    if len(suggestions) != count:
-        raise SuggestionValidationError(f"expected {count} suggestions, got {len(suggestions)}")
+        if suggestion.category not in CATEGORY_CAPS:
+            raise SuggestionValidationError(f"unknown category {suggestion.category!r}")
+        expected_kind = "video" if suggestion.category in VIDEO_CATEGORIES else "photo"
+        if candidate.kind != expected_kind:
+            raise SuggestionValidationError(
+                f"{candidate.kind} candidate {suggestion.candidateId!r} in {suggestion.category}"
+            )
+        _validate_clip_range(suggestion, candidate)
+        by_category.setdefault(suggestion.category, []).append(suggestion)
+
+    for category, entries in by_category.items():
+        if len(entries) > CATEGORY_CAPS[category]:
+            raise SuggestionValidationError(
+                f"{category} over cap: {len(entries)} > {CATEGORY_CAPS[category]}"
+            )
+        if sorted(entry.rank for entry in entries) != list(range(1, len(entries) + 1)):
+            raise SuggestionValidationError(f"ranks not 1..N within {category}")
 
     evaluations: list[CandidateEvaluation] | None = None
     if request.debug:
@@ -178,11 +256,11 @@ def _parse_and_validate(
         evaluated_ids = [evaluation.candidateId for evaluation in evaluations]
         if len(set(evaluated_ids)) != len(evaluated_ids):
             raise SuggestionValidationError("duplicate candidateId in evaluations")
-        if set(evaluated_ids) != valid_ids:
+        if set(evaluated_ids) != set(candidates_by_id):
             raise SuggestionValidationError("evaluations must cover every candidate exactly once")
         evaluations.sort(key=lambda item: item.score, reverse=True)
 
-    return sorted(suggestions, key=lambda item: item.rank), evaluations
+    return sorted(suggestions, key=lambda item: (item.category, item.rank)), evaluations
 
 
 class SuggestionValidationError(Exception):
@@ -196,12 +274,11 @@ async def generate_suggestions(
     daily_limit: int,
 ) -> SuggestionsResponse:
     request_id = uuid.uuid4().hex[:12]
-    count = min(3, len(request.candidates))
     _breaker_check()
     _check_and_count_budget(daily_limit)
 
     started = time.monotonic()
-    user_prompt = _user_prompt(request, brief, count)
+    user_prompt = _user_prompt(request, brief)
 
     last_error: str | None = None
     for attempt in (1, 2):
@@ -212,7 +289,7 @@ async def generate_suggestions(
         )
         raw = await client.rank(request, CORE_PROMPT, prompt)
         try:
-            suggestions, evaluations = _parse_and_validate(raw, request, count)
+            suggestions, evaluations = _parse_and_validate(raw, request)
             elapsed_ms = int((time.monotonic() - started) * 1000)
             logger.info(
                 "suggestions ok request=%s prompt=%s brief=%s candidates=%s attempt=%s latency_ms=%s debug=%s",
