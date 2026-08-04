@@ -31,29 +31,35 @@ struct HomeView: View {
 private struct HomeContentView: View {
     @ObservedObject var viewModel: HomeViewModel
     let onImported: (ConcertMediaImport) -> Void
+    @State private var focusedUploadItemID: UploadFeedItem.ID?
 
     var body: some View {
         GeometryReader { proxy in
+            let feedItems = uploadFeedItems
+
             ZStack {
                 CSFDesign.pageBackground.ignoresSafeArea()
 
                 ScrollView(.vertical) {
                     LazyVStack(spacing: 0) {
-                        ForEach(uploadFeedItems) { item in
+                        ForEach(feedItems) { item in
                             UploadClipPage(
                                 item: item,
+                                isActive: focusedUploadItemID == item.id || (focusedUploadItemID == nil && item.id == feedItems.first?.id),
                                 isImporting: viewModel.isImporting,
                                 selectedCount: viewModel.selectedItems.count,
                                 picker: uploadPicker,
                                 railPicker: railUploadPicker
                             )
                             .frame(width: proxy.size.width, height: proxy.size.height)
+                            .id(item.id)
                         }
                     }
                     .scrollTargetLayout()
                 }
                 .scrollIndicators(.hidden)
                 .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $focusedUploadItemID)
 
                 if viewModel.isImporting {
                     importProgress
@@ -72,6 +78,16 @@ private struct HomeContentView: View {
                             .padding(.top, 12)
                     }
                     Spacer()
+                }
+            }
+            .onAppear {
+                if focusedUploadItemID == nil {
+                    focusedUploadItemID = feedItems.first?.id
+                }
+            }
+            .onChange(of: feedItems.map(\.id)) { _, ids in
+                if focusedUploadItemID.map({ ids.contains($0) }) != true {
+                    focusedUploadItemID = ids.first
                 }
             }
         }
@@ -240,7 +256,6 @@ private struct HomeContentView: View {
 }
 
 private struct UploadFeedItem: Identifiable {
-    let id = UUID()
     let title: String
     let subtitle: String
     let meta: String
@@ -251,6 +266,10 @@ private struct UploadFeedItem: Identifiable {
     let demoClipName: String?
     var clipIndex: Int = 1
     var clipTotal: Int = 1
+
+    var id: String {
+        demoClipName ?? "\(title)-\(subtitle)-\(clipIndex)-\(clipTotal)"
+    }
 
     var demoClipURL: URL? {
         guard let demoClipName else { return nil }
@@ -318,6 +337,7 @@ private struct UploadFeedItem: Identifiable {
 
 private struct UploadClipPage<Picker: View, RailPicker: View>: View {
     let item: UploadFeedItem
+    let isActive: Bool
     let isImporting: Bool
     let selectedCount: Int
     let picker: Picker
@@ -326,7 +346,7 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
     var body: some View {
         ZStack {
             if let demoClipURL = item.demoClipURL {
-                LoopingDemoVideoPlayer(url: demoClipURL)
+                LoopingDemoVideoPlayer(url: demoClipURL, isActive: isActive)
                     .ignoresSafeArea()
             } else {
                 StagePoster()
@@ -384,9 +404,9 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                 clipProgress
-                    .frame(width: 22, height: 330)
-                    .padding(.trailing, 16)
-                    .padding(.top, 168)
+                    .frame(width: 12, height: 210)
+                    .padding(.trailing, 12)
+                    .padding(.top, 170)
                     .padding(.bottom, 138)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
             }
@@ -493,54 +513,48 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
     }
 
     private var clipProgress: some View {
-        Group {
-            if clipTotal <= 12 {
-                segmentedClipProgress
-            } else {
-                continuousClipProgress
-            }
-        }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 9)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(CSFDesign.textPrimary.opacity(0.12))
-        }
-        .allowsHitTesting(false)
-    }
-
-    private var segmentedClipProgress: some View {
-        VStack(spacing: 5) {
-            ForEach(1...max(clipTotal, 1), id: \.self) { index in
-                Capsule()
-                    .fill(index <= clipIndex ? item.tint.opacity(0.95) : CSFDesign.textPrimary.opacity(0.20))
-                    .frame(width: index == clipIndex ? 4 : 3)
-                    .frame(maxHeight: .infinity)
-                    .shadow(color: index == clipIndex ? item.tint.opacity(0.36) : .clear, radius: 8, x: -2)
-            }
-        }
-    }
-
-    private var continuousClipProgress: some View {
         GeometryReader { proxy in
             let progress = min(max(CGFloat(clipIndex) / CGFloat(max(clipTotal, 1)), 0), 1)
-            ZStack(alignment: .bottom) {
+            let markerOffset = max(0, min(proxy.size.height - 8, proxy.size.height * progress - 4))
+
+            ZStack(alignment: .top) {
                 Capsule()
-                    .fill(CSFDesign.textPrimary.opacity(0.18))
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        Capsule()
+                            .fill(CSFDesign.textPrimary.opacity(0.10))
+                    }
+                    .overlay {
+                        Capsule()
+                            .stroke(CSFDesign.textPrimary.opacity(0.16), lineWidth: 0.8)
+                    }
+                    .frame(width: 5)
+
                 Capsule()
                     .fill(
                         LinearGradient(
                             colors: [item.tint, CSFDesign.violet],
-                            startPoint: .bottom,
-                            endPoint: .top
+                            startPoint: .top,
+                            endPoint: .bottom
                         )
                     )
+                    .frame(width: 4)
                     .frame(height: max(18, proxy.size.height * progress))
-                    .shadow(color: item.tint.opacity(0.38), radius: 8, x: -2)
+                    .shadow(color: item.tint.opacity(0.34), radius: 8, x: -2)
+
+                Circle()
+                    .fill(CSFDesign.textPrimary)
+                    .frame(width: 8, height: 8)
+                    .overlay {
+                        Circle()
+                            .stroke(item.tint.opacity(0.9), lineWidth: 1.5)
+                    }
+                    .shadow(color: item.tint.opacity(0.55), radius: 8)
+                    .offset(y: markerOffset)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 4)
+        .allowsHitTesting(false)
     }
 
     private func stageLight(color: Color, rotation: Double, xOffset: CGFloat) -> some View {
@@ -710,15 +724,16 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
 
 private struct LoopingDemoVideoPlayer: UIViewRepresentable {
     let url: URL
+    let isActive: Bool
 
     func makeUIView(context: Context) -> DemoVideoPlayerView {
         let view = DemoVideoPlayerView()
-        context.coordinator.configure(url: url, in: view)
+        context.coordinator.configure(url: url, isActive: isActive, in: view)
         return view
     }
 
     func updateUIView(_ uiView: DemoVideoPlayerView, context: Context) {
-        context.coordinator.configure(url: url, in: uiView)
+        context.coordinator.configure(url: url, isActive: isActive, in: uiView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -730,20 +745,32 @@ private struct LoopingDemoVideoPlayer: UIViewRepresentable {
         private var player: AVQueuePlayer?
         private var looper: AVPlayerLooper?
 
-        func configure(url: URL, in view: DemoVideoPlayerView) {
-            guard currentURL != url else { return }
-            currentURL = url
+        func configure(url: URL, isActive: Bool, in view: DemoVideoPlayerView) {
+            if currentURL != url {
+                currentURL = url
 
-            let item = AVPlayerItem(url: url)
-            let queuePlayer = AVQueuePlayer()
-            configureAudioPlayback()
-            queuePlayer.isMuted = false
-            queuePlayer.volume = 1
-            queuePlayer.actionAtItemEnd = .none
-            looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
-            player = queuePlayer
-            view.playerLayer.player = queuePlayer
-            queuePlayer.play()
+                let item = AVPlayerItem(url: url)
+                let queuePlayer = AVQueuePlayer()
+                queuePlayer.actionAtItemEnd = .none
+                looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
+                player = queuePlayer
+                view.playerLayer.player = queuePlayer
+            }
+
+            updatePlayback(isActive: isActive)
+        }
+
+        private func updatePlayback(isActive: Bool) {
+            guard let player else { return }
+            player.isMuted = !isActive
+            player.volume = isActive ? 1 : 0
+
+            if isActive {
+                configureAudioPlayback()
+                player.play()
+            } else {
+                player.pause()
+            }
         }
 
         private func configureAudioPlayback() {
