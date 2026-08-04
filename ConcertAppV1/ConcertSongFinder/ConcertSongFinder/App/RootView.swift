@@ -64,7 +64,7 @@ struct RootView: View {
     private var uploadFlow: some View {
         switch uploadRoute {
         case .upload:
-            HomeView { mediaImport in
+            HomeView(isActive: selectedTab == .upload) { mediaImport in
                 // Analysis starts immediately after import; concert
                 // assignment is fully automatic (identification first,
                 // timestamp fallback otherwise) at persistence time.

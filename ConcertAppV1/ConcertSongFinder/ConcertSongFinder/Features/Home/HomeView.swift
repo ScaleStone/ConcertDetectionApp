@@ -7,12 +7,13 @@ import UIKit
 struct HomeView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @StateObject private var viewModelHolder = ViewModelHolder()
+    var isActive: Bool = true
     let onImported: (ConcertMediaImport) -> Void
 
     var body: some View {
         Group {
             if let viewModel = viewModelHolder.viewModel {
-                HomeContentView(viewModel: viewModel, onImported: onImported)
+                HomeContentView(viewModel: viewModel, isActive: isActive, onImported: onImported)
             } else {
                 ProgressView()
                     .task {
@@ -30,6 +31,7 @@ struct HomeView: View {
 
 private struct HomeContentView: View {
     @ObservedObject var viewModel: HomeViewModel
+    let isActive: Bool
     let onImported: (ConcertMediaImport) -> Void
     @State private var focusedUploadItemID: UploadFeedItem.ID?
 
@@ -45,7 +47,7 @@ private struct HomeContentView: View {
                         ForEach(feedItems) { item in
                             UploadClipPage(
                                 item: item,
-                                isActive: focusedUploadItemID == item.id || (focusedUploadItemID == nil && item.id == feedItems.first?.id),
+                                isActive: isActive && (focusedUploadItemID == item.id || (focusedUploadItemID == nil && item.id == feedItems.first?.id)),
                                 isImporting: viewModel.isImporting,
                                 selectedCount: viewModel.selectedItems.count,
                                 picker: uploadPicker,
@@ -342,11 +344,12 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
     let selectedCount: Int
     let picker: Picker
     let railPicker: RailPicker
+    @State private var playbackProgress: Double = 0
 
     var body: some View {
         ZStack {
             if let demoClipURL = item.demoClipURL {
-                LoopingDemoVideoPlayer(url: demoClipURL, isActive: isActive)
+                LoopingDemoVideoPlayer(url: demoClipURL, isActive: isActive, playbackProgress: $playbackProgress)
                     .ignoresSafeArea()
             } else {
                 StagePoster()
@@ -404,11 +407,10 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                 clipProgress
-                    .frame(width: 12, height: 210)
-                    .padding(.trailing, 12)
-                    .padding(.top, 170)
-                    .padding(.bottom, 138)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .frame(height: 5)
+                    .padding(.horizontal, 42)
+                    .padding(.bottom, 112)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
 
             VStack {
@@ -514,10 +516,9 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
 
     private var clipProgress: some View {
         GeometryReader { proxy in
-            let progress = min(max(CGFloat(clipIndex) / CGFloat(max(clipTotal, 1)), 0), 1)
-            let markerOffset = max(0, min(proxy.size.height - 8, proxy.size.height * progress - 4))
+            let progress = min(max(playbackProgress, 0), 1)
 
-            ZStack(alignment: .top) {
+            ZStack(alignment: .leading) {
                 Capsule()
                     .fill(.ultraThinMaterial)
                     .overlay {
@@ -528,29 +529,17 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
                         Capsule()
                             .stroke(CSFDesign.textPrimary.opacity(0.16), lineWidth: 0.8)
                     }
-                    .frame(width: 5)
 
                 Capsule()
                     .fill(
                         LinearGradient(
                             colors: [item.tint, CSFDesign.violet],
-                            startPoint: .top,
-                            endPoint: .bottom
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
                     )
-                    .frame(width: 4)
-                    .frame(height: max(18, proxy.size.height * progress))
-                    .shadow(color: item.tint.opacity(0.34), radius: 8, x: -2)
-
-                Circle()
-                    .fill(CSFDesign.textPrimary)
-                    .frame(width: 8, height: 8)
-                    .overlay {
-                        Circle()
-                            .stroke(item.tint.opacity(0.9), lineWidth: 1.5)
-                    }
-                    .shadow(color: item.tint.opacity(0.55), radius: 8)
-                    .offset(y: markerOffset)
+                    .frame(width: max(8, proxy.size.width * progress))
+                    .shadow(color: item.tint.opacity(0.34), radius: 8, y: 2)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -725,15 +714,16 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
 private struct LoopingDemoVideoPlayer: UIViewRepresentable {
     let url: URL
     let isActive: Bool
+    @Binding var playbackProgress: Double
 
     func makeUIView(context: Context) -> DemoVideoPlayerView {
         let view = DemoVideoPlayerView()
-        context.coordinator.configure(url: url, isActive: isActive, in: view)
+        context.coordinator.configure(url: url, isActive: isActive, playbackProgress: $playbackProgress, in: view)
         return view
     }
 
     func updateUIView(_ uiView: DemoVideoPlayerView, context: Context) {
-        context.coordinator.configure(url: url, isActive: isActive, in: uiView)
+        context.coordinator.configure(url: url, isActive: isActive, playbackProgress: $playbackProgress, in: uiView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -744,10 +734,20 @@ private struct LoopingDemoVideoPlayer: UIViewRepresentable {
         private var currentURL: URL?
         private var player: AVQueuePlayer?
         private var looper: AVPlayerLooper?
+        private var timeObserver: Any?
+        private var playbackProgress: Binding<Double>?
 
-        func configure(url: URL, isActive: Bool, in view: DemoVideoPlayerView) {
+        deinit {
+            removeTimeObserver()
+        }
+
+        func configure(url: URL, isActive: Bool, playbackProgress: Binding<Double>, in view: DemoVideoPlayerView) {
+            self.playbackProgress = playbackProgress
+
             if currentURL != url {
                 currentURL = url
+                playbackProgress.wrappedValue = 0
+                removeTimeObserver()
 
                 let item = AVPlayerItem(url: url)
                 let queuePlayer = AVQueuePlayer()
@@ -755,6 +755,7 @@ private struct LoopingDemoVideoPlayer: UIViewRepresentable {
                 looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
                 player = queuePlayer
                 view.playerLayer.player = queuePlayer
+                addTimeObserver(to: queuePlayer)
             }
 
             updatePlayback(isActive: isActive)
@@ -771,6 +772,25 @@ private struct LoopingDemoVideoPlayer: UIViewRepresentable {
             } else {
                 player.pause()
             }
+        }
+
+        private func addTimeObserver(to player: AVQueuePlayer) {
+            let interval = CMTime(seconds: 1.0 / 30.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self, weak player] time in
+                guard let self, let player, let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else {
+                    self?.playbackProgress?.wrappedValue = 0
+                    return
+                }
+                let progress = min(max(time.seconds / duration, 0), 1)
+                self.playbackProgress?.wrappedValue = progress
+            }
+        }
+
+        private func removeTimeObserver() {
+            if let timeObserver, let player {
+                player.removeTimeObserver(timeObserver)
+            }
+            timeObserver = nil
         }
 
         private func configureAudioPlayback() {
