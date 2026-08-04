@@ -25,6 +25,8 @@ targets:
       path: ConcertSongFinder/Resources/Info.plist
       properties:
         ITSAppUsesNonExemptEncryption: false
+        CFBundleDisplayName: Reverbly
+        CFBundleName: Reverbly
         CFBundleVersion: "2"
         UILaunchScreen:
           UIColorName: LaunchBackground
