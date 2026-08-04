@@ -21,6 +21,10 @@ ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = "claude-sonnet-4-5"
 GEMINI_API_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+# Free-tier quotas are tracked PER MODEL, so when the primary model is rate
+# limited we retry on siblings with separate (and larger) quota buckets
+# instead of failing. Ordered by quality.
+DEFAULT_GEMINI_FALLBACK_MODELS = ["gemini-2.5-flash-lite", "gemini-2.0-flash"]
 REQUEST_TIMEOUT_SECONDS = 30.0
 
 
@@ -118,7 +122,6 @@ class GeminiSuggestionClient:
                 parts.append({"inline_data": {"mime_type": "image/jpeg", "data": frame}})
         parts.append({"text": user_prompt})
 
-        model = self.settings.llm_model or DEFAULT_GEMINI_MODEL
         body = {
             "system_instruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": parts}],
@@ -138,40 +141,63 @@ class GeminiSuggestionClient:
         }
 
         client = await get_shared_client()
-        try:
-            response = await client.post(
-                GEMINI_API_URL_TEMPLATE.format(model=model),
-                json=body,
-                headers=headers,
-                timeout=REQUEST_TIMEOUT_SECONDS,
-            )
-        except Exception as exc:  # timeout / network
-            logger.error("LLM request failed transport error=%s", type(exc).__name__)
-            raise HTTPException(
-                status_code=502,
-                detail={"code": "suggestions_provider_error", "message": "The suggestions provider could not be reached."},
-            )
+        rate_limited = False
+        for model in self._model_chain():
+            try:
+                response = await client.post(
+                    GEMINI_API_URL_TEMPLATE.format(model=model),
+                    json=body,
+                    headers=headers,
+                    timeout=REQUEST_TIMEOUT_SECONDS,
+                )
+            except Exception as exc:  # timeout / network
+                logger.error("LLM request failed transport model=%s error=%s", model, type(exc).__name__)
+                raise HTTPException(
+                    status_code=502,
+                    detail={"code": "suggestions_provider_error", "message": "The suggestions provider could not be reached."},
+                )
 
-        if response.status_code == 429:
-            raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "Suggestions are temporarily rate limited."})
-        if response.status_code >= 400:
-            # Log status only; never log request bodies (they contain frames).
-            logger.error("LLM provider error status=%s", response.status_code)
-            raise HTTPException(status_code=502, detail={"code": "suggestions_provider_error", "message": "The suggestions provider returned an error."})
+            if response.status_code == 429:
+                # This model's quota bucket is exhausted; try the next one.
+                rate_limited = True
+                logger.warning("LLM model rate limited, falling back model=%s", model)
+                continue
+            if response.status_code >= 400:
+                # Log status only; never log request bodies (they contain frames).
+                logger.error("LLM provider error model=%s status=%s", model, response.status_code)
+                raise HTTPException(status_code=502, detail={"code": "suggestions_provider_error", "message": "The suggestions provider returned an error."})
 
-        payload = response.json()
-        try:
-            usage = payload.get("usageMetadata", {})
-            logger.info(
-                "LLM response ok input_tokens=%s output_tokens=%s",
-                usage.get("promptTokenCount"),
-                usage.get("candidatesTokenCount"),
-            )
-            candidates = payload.get("candidates", [])
-            content_parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
-            return "".join(part.get("text", "") for part in content_parts)
-        except (KeyError, AttributeError, TypeError, IndexError):
-            raise HTTPException(status_code=502, detail={"code": "suggestions_provider_error", "message": "The suggestions provider returned an invalid response."})
+            payload = response.json()
+            try:
+                usage = payload.get("usageMetadata", {})
+                logger.info(
+                    "LLM response ok model=%s input_tokens=%s output_tokens=%s",
+                    model,
+                    usage.get("promptTokenCount"),
+                    usage.get("candidatesTokenCount"),
+                )
+                candidates = payload.get("candidates", [])
+                content_parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+                return "".join(part.get("text", "") for part in content_parts)
+            except (KeyError, AttributeError, TypeError, IndexError):
+                raise HTTPException(status_code=502, detail={"code": "suggestions_provider_error", "message": "The suggestions provider returned an invalid response."})
+
+        assert rate_limited
+        logger.error("LLM all models rate limited chain=%s", ",".join(self._model_chain()))
+        raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "Suggestions are temporarily rate limited."})
+
+    def _model_chain(self) -> list[str]:
+        primary = self.settings.llm_model or DEFAULT_GEMINI_MODEL
+        configured = self.settings.llm_fallback_models
+        if configured is not None:
+            fallbacks = [model.strip() for model in configured.split(",") if model.strip()]
+        else:
+            fallbacks = DEFAULT_GEMINI_FALLBACK_MODELS
+        chain = [primary]
+        for model in fallbacks:
+            if model not in chain:
+                chain.append(model)
+        return chain
 
 
 def make_llm_client(settings: Settings) -> "SuggestionLLMClient":

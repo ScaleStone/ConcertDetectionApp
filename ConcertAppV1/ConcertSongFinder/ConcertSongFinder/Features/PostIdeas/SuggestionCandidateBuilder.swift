@@ -42,9 +42,19 @@ enum SuggestionCandidateBuilder {
         let selected = prioritize(items: items, occurrences: occurrences, headliner: headliner)
             .prefix(maxCandidates)
 
+        // Big concerts get 3 frames per video instead of 4: still enough for
+        // the stability comparison, but ~25% smaller uploads and faster,
+        // cheaper model calls when the candidate list is full.
+        let framesPerVideo = selected.count > 8 ? 3 : maxFramesPerVideo
+
         var built: [BuiltCandidate] = []
         for item in selected {
-            if let candidate = await buildCandidate(item: item, occurrences: occurrences, headliner: headliner) {
+            if let candidate = await buildCandidate(
+                item: item,
+                occurrences: occurrences,
+                headliner: headliner,
+                framesPerVideo: framesPerVideo
+            ) {
                 built.append(candidate)
             }
         }
@@ -145,7 +155,8 @@ enum SuggestionCandidateBuilder {
     private static func buildCandidate(
         item: ConcertMediaGrouping.MediaLibraryItem,
         occurrences: [SetlistOccurrence],
-        headliner: String?
+        headliner: String?,
+        framesPerVideo: Int
     ) async -> BuiltCandidate? {
         let context = songContext(for: item, occurrences: occurrences, headliner: headliner)
         let frames: [UIImage]
@@ -166,7 +177,7 @@ enum SuggestionCandidateBuilder {
             segmentStart = start
             segmentEnd = end
             videoDuration = video.duration
-            frames = await videoFrames(url: video.localURL, start: start, end: end)
+            frames = await videoFrames(url: video.localURL, start: start, end: end, count: framesPerVideo)
         case .photo(let photo):
             kind = "photo"
             duration = nil
@@ -206,16 +217,16 @@ enum SuggestionCandidateBuilder {
     /// edge so the first/last frames are not black transitions). More
     /// temporal coverage helps the model spot flashlight seas, mosh pits,
     /// and shakiness (frame-to-frame differences).
-    private static func videoFrames(url: URL, start: TimeInterval, end: TimeInterval) async -> [UIImage] {
+    private static func videoFrames(url: URL, start: TimeInterval, end: TimeInterval, count: Int) async -> [UIImage] {
         let span = max(0, end - start)
         let inset = min(0.5, span / 4)
         let times: [TimeInterval]
-        if span < 2 {
+        if span < 2 || count < 2 {
             times = [start + span / 2]
         } else {
             let usable = span - inset * 2
-            times = (0..<maxFramesPerVideo).map { index in
-                start + inset + usable * Double(index) / Double(maxFramesPerVideo - 1)
+            times = (0..<count).map { index in
+                start + inset + usable * Double(index) / Double(count - 1)
             }
         }
 

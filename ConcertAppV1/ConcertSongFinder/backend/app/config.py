@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     llm_model: str | None = None
     # "anthropic" | "gemini"; auto-detected from the key format when unset.
     llm_provider: str | None = None
+    # Comma-separated fallback models tried when the primary is rate
+    # limited (free-tier quotas are per model). Defaults in llm_client.
+    llm_fallback_models: str | None = None
     suggestions_enabled: bool = True
     suggestions_daily_limit: int = 50
 

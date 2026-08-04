@@ -368,3 +368,81 @@ def test_non_debug_response_has_no_evaluations() -> None:
     assert response.status_code == 200
     assert response.json()["evaluations"] is None
     assert "DEBUG MODE" not in mock.calls[0]
+
+
+# --- Gemini model fallback chain -----------------------------------------------
+
+class FakeHTTPResponse:
+    def __init__(self, status_code: int, payload: dict | None = None) -> None:
+        self.status_code = status_code
+        self._payload = payload or {}
+
+    def json(self) -> dict:
+        return self._payload
+
+
+class FakeHTTPClient:
+    def __init__(self, responses: list[FakeHTTPResponse]) -> None:
+        self.responses = list(responses)
+        self.urls: list[str] = []
+
+    async def post(self, url: str, **kwargs) -> FakeHTTPResponse:
+        self.urls.append(url)
+        return self.responses.pop(0)
+
+
+def gemini_ok_payload(text: str) -> dict:
+    return {"candidates": [{"content": {"parts": [{"text": text}]}}], "usageMetadata": {}}
+
+
+def run_gemini_rank(monkeypatch, responses: list[FakeHTTPResponse], settings: Settings):
+    import asyncio
+
+    from app.models.suggestions import SuggestionCandidate
+    from app.services import llm_client as llm_client_module
+
+    fake = FakeHTTPClient(responses)
+
+    async def fake_shared_client():
+        return fake
+
+    monkeypatch.setattr(llm_client_module, "get_shared_client", fake_shared_client)
+    client = llm_client_module.GeminiSuggestionClient(settings=settings)
+    request = SuggestionsRequest(
+        concertTitle="T",
+        candidates=[SuggestionCandidate(id="a", kind="video")],
+    )
+    return fake, asyncio.run(client.rank(request, "system", "user"))
+
+
+def test_gemini_falls_back_to_next_model_on_429(monkeypatch) -> None:
+    settings = Settings(llm_api_key="AQ.test")
+    fake, text = run_gemini_rank(
+        monkeypatch,
+        [FakeHTTPResponse(429), FakeHTTPResponse(200, gemini_ok_payload("fallback result"))],
+        settings,
+    )
+    assert text == "fallback result"
+    assert "gemini-2.5-flash:" in fake.urls[0]
+    assert "gemini-2.5-flash-lite:" in fake.urls[1]
+
+
+def test_gemini_all_models_rate_limited_returns_429(monkeypatch) -> None:
+    from fastapi import HTTPException
+
+    settings = Settings(llm_api_key="AQ.test")
+    with pytest.raises(HTTPException) as excinfo:
+        run_gemini_rank(monkeypatch, [FakeHTTPResponse(429)] * 3, settings)
+    assert excinfo.value.status_code == 429
+
+
+def test_gemini_fallback_chain_configurable_and_deduplicated(monkeypatch) -> None:
+    settings = Settings(llm_api_key="AQ.test", llm_model="gemini-2.5-flash", llm_fallback_models="gemini-2.5-flash, custom-model")
+    fake, text = run_gemini_rank(
+        monkeypatch,
+        [FakeHTTPResponse(429), FakeHTTPResponse(200, gemini_ok_payload("ok"))],
+        settings,
+    )
+    assert text == "ok"
+    # Primary deduplicated out of the fallback list.
+    assert "custom-model:" in fake.urls[1]
