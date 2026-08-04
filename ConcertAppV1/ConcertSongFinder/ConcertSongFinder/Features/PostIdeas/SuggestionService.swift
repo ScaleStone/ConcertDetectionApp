@@ -63,7 +63,7 @@ enum SuggestionCategory: String, Decodable, CaseIterable {
     static let displayOrder: [SuggestionCategory] = [.artistFeature, .uniqueMoment, .bestQuality, .photoSlideshow]
 }
 
-struct PostSuggestionDTO: Decodable, Identifiable, Hashable {
+struct PostSuggestionDTO: Codable, Identifiable, Hashable {
     let candidateId: String
     let category: String
     let rank: Int
@@ -85,7 +85,7 @@ struct PostSuggestionDTO: Decodable, Identifiable, Hashable {
     }
 }
 
-struct CandidateEvaluationDTO: Decodable, Identifiable, Hashable {
+struct CandidateEvaluationDTO: Codable, Identifiable, Hashable {
     let candidateId: String
     let score: Int
     let reasoning: String
@@ -94,7 +94,7 @@ struct CandidateEvaluationDTO: Decodable, Identifiable, Hashable {
     var id: String { candidateId }
 }
 
-struct SuggestionsResponseDTO: Decodable {
+struct SuggestionsResponseDTO: Codable {
     let suggestions: [PostSuggestionDTO]
     let promptVersion: String
     let trendBriefVersion: String
@@ -117,23 +117,41 @@ final class SuggestionService: ObservableObject {
 
     private let client: BackendAPIClient
     private var cache: [String: Result] = [:]
+    private let diskCache = SuggestionDiskCache()
 
     init(client: BackendAPIClient) {
         self.client = client
     }
 
     /// Cache key covers the concert's content (updatedAt changes whenever
-    /// media/setlist change). The trend-brief version is server-side, so the
-    /// cache is session-scoped only; a fresh launch picks up new briefs.
+    /// media/setlist change).
     private func cacheKey(for concert: ConcertRecord, includeScores: Bool) -> String {
         "\(concert.id.uuidString)-\(concert.updatedAt.timeIntervalSince1970)-scores:\(includeScores)"
     }
 
-    func suggestions(for concert: ConcertRecord, includeScores: Bool = false) async throws -> Result {
+    /// Serves memory, then disk, then network. Persisting to disk means app
+    /// relaunches never re-spend an LLM request (and provider rate-limit
+    /// budget) for an unchanged concert; `forceRefresh` (the Refresh menu
+    /// action) is the explicit way to re-fetch and pick up new trend briefs.
+    func suggestions(for concert: ConcertRecord, includeScores: Bool = false, forceRefresh: Bool = false) async throws -> Result {
         let key = cacheKey(for: concert, includeScores: includeScores)
-        if let cached = cache[key] {
-            AppLog.postIdeas.info("Post ideas served from cache concert=\(concert.id.uuidString, privacy: .public)")
-            return cached
+        if !forceRefresh {
+            if let cached = cache[key] {
+                AppLog.postIdeas.info("Post ideas served from memory cache concert=\(concert.id.uuidString, privacy: .public)")
+                return cached
+            }
+            if let persisted = diskCache.load(key: key) {
+                // Rebuild candidates locally (fast, on-device) so thumbnails
+                // and share targets rejoin the persisted response by ID.
+                let rebuilt = await SuggestionCandidateBuilder.build(for: concert)
+                let result = Result(
+                    response: persisted,
+                    candidatesByID: Dictionary(uniqueKeysWithValues: rebuilt.map { ($0.dto.id, $0) })
+                )
+                cache[key] = result
+                AppLog.postIdeas.info("Post ideas served from disk cache concert=\(concert.id.uuidString, privacy: .public)")
+                return result
+            }
         }
 
         let built = await SuggestionCandidateBuilder.build(for: concert)
@@ -165,6 +183,7 @@ final class SuggestionService: ObservableObject {
             candidatesByID: Dictionary(uniqueKeysWithValues: built.map { ($0.dto.id, $0) })
         )
         cache[key] = result
+        diskCache.save(response, key: key)
         return result
     }
 
@@ -183,4 +202,64 @@ final class SuggestionService: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+}
+
+// MARK: - Disk cache
+
+/// Small JSON-file cache of suggestion responses, keyed by concert content.
+/// Responses only (no frames, no images) so the file stays tiny. Entries
+/// expire after 24h so refreshed trend briefs propagate within a day, and
+/// the store is pruned to the newest 20 entries.
+private struct SuggestionDiskCache {
+    private struct Entry: Codable {
+        let savedAt: Date
+        let response: SuggestionsResponseDTO
+    }
+
+    private let maxEntries = 20
+    private let timeToLive: TimeInterval = 24 * 60 * 60
+
+    private var fileURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ConcertSongFinder", isDirectory: true)
+            .appendingPathComponent("post-ideas-cache.json")
+    }
+
+    func load(key: String) -> SuggestionsResponseDTO? {
+        guard let entry = loadAll()[key], Date().timeIntervalSince(entry.savedAt) < timeToLive else {
+            return nil
+        }
+        return entry.response
+    }
+
+    func save(_ response: SuggestionsResponseDTO, key: String) {
+        var entries = loadAll()
+        entries[key] = Entry(savedAt: Date(), response: response)
+        // Prune expired entries and cap total size, oldest first.
+        entries = entries.filter { Date().timeIntervalSince($0.value.savedAt) < timeToLive }
+        if entries.count > maxEntries {
+            let sortedKeys = entries.sorted { $0.value.savedAt < $1.value.savedAt }.map(\.key)
+            for staleKey in sortedKeys.prefix(entries.count - maxEntries) {
+                entries.removeValue(forKey: staleKey)
+            }
+        }
+        do {
+            try FileManager.default.createDirectory(
+                at: fileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            let data = try JSONEncoder().encode(entries)
+            try data.write(to: fileURL, options: [.atomic])
+        } catch {
+            AppLog.postIdeas.error("Post ideas disk cache write failed error=\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func loadAll() -> [String: Entry] {
+        guard let data = try? Data(contentsOf: fileURL),
+              let entries = try? JSONDecoder().decode([String: Entry].self, from: data) else {
+            return [:]
+        }
+        return entries
+    }
 }

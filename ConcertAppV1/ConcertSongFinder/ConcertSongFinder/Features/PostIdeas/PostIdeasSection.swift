@@ -146,7 +146,7 @@ struct PostIdeasSection: View {
                 Menu {
                     Button("Refresh") {
                         dismissedCandidateIDs = []
-                        requestIdeas()
+                        requestIdeas(forceRefresh: true)
                     }
                     Toggle("Show AI Scores (Testing)", isOn: $showScores)
                     Button("Turn Off Post Ideas", role: .destructive) {
@@ -164,13 +164,17 @@ struct PostIdeasSection: View {
         }
     }
 
-    private func requestIdeas() {
+    private func requestIdeas(forceRefresh: Bool = false) {
         guard consentGranted, !isLoading else { return }
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                let fetched = try await environment.postSuggestionService.suggestions(for: concert, includeScores: showScores)
+                let fetched = try await environment.postSuggestionService.suggestions(
+                    for: concert,
+                    includeScores: showScores,
+                    forceRefresh: forceRefresh
+                )
                 result = fetched
             } catch is CancellationError {
                 // View went away; nothing to show.
@@ -188,7 +192,7 @@ struct PostIdeasSection: View {
     private func friendlyMessage(for error: ConcertSongFinderError) -> String {
         switch error {
         case .rateLimited:
-            return "Post ideas are taking a break — the daily limit was reached. Try again tomorrow."
+            return "Post ideas are getting a lot of requests right now. Wait a minute and try again. If it keeps happening all day, the daily limit may be reached."
         case .backendUnavailable:
             return "Post ideas are temporarily unavailable. Your concerts are unaffected."
         default:
