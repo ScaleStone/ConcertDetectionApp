@@ -407,9 +407,8 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                 clipProgress
-                    .frame(height: 5)
-                    .padding(.horizontal, 42)
-                    .padding(.bottom, 112)
+                    .frame(height: 3)
+                    .padding(.bottom, 100)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
 
@@ -519,27 +518,18 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
             let progress = min(max(playbackProgress, 0), 1)
 
             ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(.ultraThinMaterial)
+                Rectangle()
+                    .fill(CSFDesign.textPrimary.opacity(0.18))
                     .overlay {
-                        Capsule()
-                            .fill(CSFDesign.textPrimary.opacity(0.10))
-                    }
-                    .overlay {
-                        Capsule()
-                            .stroke(CSFDesign.textPrimary.opacity(0.16), lineWidth: 0.8)
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.18)
                     }
 
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [item.tint, CSFDesign.violet],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: max(8, proxy.size.width * progress))
-                    .shadow(color: item.tint.opacity(0.34), radius: 8, y: 2)
+                Rectangle()
+                    .fill(CSFDesign.textPrimary.opacity(0.96))
+                    .frame(width: max(4, proxy.size.width * progress))
+                    .shadow(color: CSFDesign.textPrimary.opacity(0.38), radius: 5, y: 1)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
