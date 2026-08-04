@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConcertSongFinder — Color Scheme Samples</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    background: #17181c; color: #eee;
+    padding: 40px 24px; 
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .intro { color: #9aa; font-size: 14px; margin-bottom: 32px; }
+  .schemes { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; }
+  .scheme { width: 300px; }
+  .scheme h2 { font-size: 16px; margin-bottom: 2px; }
+  .scheme .tagline { font-size: 12px; color: #99a; margin-bottom: 12px; min-height: 30px; }
+
+  /* phone mock */
+  .phone {
+    border-radius: 34px; overflow: hidden; border: 6px solid #000;
+    box-shadow: 0 18px 40px rgba(0,0,0,.55);
+  }
+  .screen { padding: 18px 14px 0; min-height: 540px; display: flex; flex-direction: column; }
+  .navtitle { font-size: 19px; font-weight: 700; }
+  .subtitle { font-size: 11.5px; margin-top: 2px; }
+  .search {
+    margin: 12px 0; padding: 8px 12px; border-radius: 10px; font-size: 12.5px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tile { border-radius: 10px; aspect-ratio: 1; position: relative; overflow: hidden; }
+  .tile .badge {
+    position: absolute; bottom: 5px; left: 5px; font-size: 8.5px; font-weight: 600;
+    color: #fff; background: rgba(0,0,0,.55); padding: 2px 6px; border-radius: 8px;
+  }
+  .tilelabel { font-size: 9.5px; font-weight: 600; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cell {}
+  .cta {
+    margin: 14px 0 10px; padding: 11px; border-radius: 12px; text-align: center;
+    font-size: 13px; font-weight: 700;
+  }
+  .pill { display:inline-block; font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; margin-right: 4px; }
+  .tabbar {
+    margin-top: auto; display: flex; justify-content: space-around; padding: 10px 0 16px;
+    font-size: 10.5px; font-weight: 600;
+  }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .tab .dot { width: 18px; height: 18px; border-radius: 5px; }
+  .swatches { display: flex; margin-top: 10px; border-radius: 8px; overflow: hidden; }
+  .swatch { flex: 1; height: 34px; position: relative; }
+  .hex { font-size: 8.5px; text-align: center; margin-top: 3px; color: #889; }
+  .hexrow { display: flex; }
+  .hexrow span { flex: 1; text-align: center; font-size: 8.5px; color: #889; margin-top: 4px; }
+
+  /* ============ Scheme 1: Aftershow (recommended) ============ */
+  .s1 .screen { background: #0B0B1E; }
+  .s1 .navtitle { color: #F5F2FF; }
+  .s1 .subtitle { color: #9A93B8; }
+  .s1 .search { background: #1A1533; color: #9A93B8; }
+  .s1 .tilelabel { color: #F5F2FF; }
+  .s1 .t1 { background: linear-gradient(135deg, #8E5CF7, #3B2A66); }
+  .s1 .t2 { background: linear-gradient(135deg, #E84393, #5A2049); }
+  .s1 .t3 { background: linear-gradient(135deg, #4A3F7A, #1A1533); }
+  .s1 .cta { background: #E84393; color: #fff; }
+  .s1 .pill-ok { background: rgba(61,220,151,.18); color: #3DDC97; }
+  .s1 .pill-warn { background: rgba(255,180,84,.18); color: #FFB454; }
+  .s1 .tabbar { background: #1A1533; color: #9A93B8; }
+  .s1 .tab.active { color: #E84393; }
+  .s1 .tab .dot { background: #3B2F5C; }
+  .s1 .tab.active .dot { background: #E84393; }
+
+  /* ============ Scheme 2: Neon Echo ============ */
+  .s2 .screen { background: #060A0F; }
+  .s2 .navtitle { color: #EDFDFB; }
+  .s2 .subtitle { color: #7E97A6; }
+  .s2 .search { background: #10202B; color: #7E97A6; }
+  .s2 .tilelabel { color: #EDFDFB; }
+  .s2 .t1 { background: linear-gradient(135deg, #00E5C3, #0A5850); }
+  .s2 .t2 { background: linear-gradient(135deg, #29A8FF, #0F3D66); }
+  .s2 .t3 { background: linear-gradient(135deg, #16323F, #10202B); }
+  .s2 .cta { background: #00E5C3; color: #04211D; }
+  .s2 .pill-ok { background: rgba(0,229,195,.16); color: #00E5C3; }
+  .s2 .pill-warn { background: rgba(255,209,102,.16); color: #FFD166; }
+  .s2 .tabbar { background: #10202B; color: #7E97A6; }
+  .s2 .tab.active { color: #00E5C3; }
+  .s2 .tab .dot { background: #1C3947; }
+  .s2 .tab.active .dot { background: #00E5C3; }
+
+  /* ============ Scheme 3: Amber Stage ============ */
+  .s3 .screen { background: #16100C; }
+  .s3 .navtitle { color: #FFF6EC; }
+  .s3 .subtitle { color: #A89484; }
+  .s3 .search { background: #291E16; color: #A89484; }
+  .s3 .tilelabel { color: #FFF6EC; }
+  .s3 .t1 { background: linear-gradient(135deg, #FF9F45, #7A4416); }
+  .s3 .t2 { background: linear-gradient(135deg, #E4572E, #6B2412); }
+  .s3 .t3 { background: linear-gradient(135deg, #4A3423, #291E16); }
+  .s3 .cta { background: #FF9F45; color: #331A02; }
+  .s3 .pill-ok { background: rgba(148,210,102,.18); color: #94D266; }
+  .s3 .pill-warn { background: rgba(228,87,46,.18); color: #E4572E; }
+  .s3 .tabbar { background: #291E16; color: #A89484; }
+  .s3 .tab.active { color: #FF9F45; }
+  .s3 .tab .dot { background: #45311F; }
+  .s3 .tab.active .dot { background: #FF9F45; }
+
+  /* ============ Scheme 4: Daylight Festival ============ */
+  .s4 .screen { background: #FAF7F2; }
+  .s4 .navtitle { color: #1F1A2E; }
+  .s4 .subtitle { color: #7A7490; }
+  .s4 .search { background: #EFE9E0; color: #7A7490; }
+  .s4 .tilelabel { color: #1F1A2E; }
+  .s4 .t1 { background: linear-gradient(135deg, #FF6B6B, #B93B54); }
+  .s4 .t2 { background: linear-gradient(135deg, #7C5CE0, #4B3791); }
+  .s4 .t3 { background: linear-gradient(135deg, #D9D2C7, #EFE9E0); }
+  .s4 .cta { background: #7C5CE0; color: #fff; }
+  .s4 .pill-ok { background: rgba(38,166,120,.14); color: #26A678; }
+  .s4 .pill-warn { background: rgba(240,138,17,.16); color: #F08A11; }
+  .s4 .tabbar { background: #EFE9E0; color: #7A7490; }
+  .s4 .tab.active { color: #7C5CE0; }
+  .s4 .tab .dot { background: #D9D2C7; }
+  .s4 .tab.active .dot { background: #7C5CE0; }
+</style>
+</head>
+<body>
+<h1>ConcertSongFinder — Color Scheme Samples</h1>
+<p class="intro">The same concert-detail screen mocked in four palettes. Open on a phone-sized window or squint from a distance — the winner is usually the one that makes the (fake) thumbnails pop.</p>
+
+<div class="schemes">
+
+  <!-- template repeated per scheme -->
+  <div class="scheme s1">
+    <h2>1 · Aftershow — recommended</h2>
+    <p class="tagline">The venue at night: violet dark, stage-light magenta. Nostalgia + adrenaline.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div class="cell"><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div class="cell"><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div class="cell"><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div class="cell"><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div class="cell"><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div class="cell"><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar">
+        <div class="tab active"><div class="dot"></div>My Concerts</div>
+        <div class="tab"><div class="dot"></div>Upload</div>
+      </div>
+    </div></div>
+    <div class="swatches">
+      <div class="swatch" style="background:#0B0B1E"></div>
+      <div class="swatch" style="background:#1A1533"></div>
+      <div class="swatch" style="background:#E84393"></div>
+      <div class="swatch" style="background:#8E5CF7"></div>
+      <div class="swatch" style="background:#FFB454"></div>
+      <div class="swatch" style="background:#F5F2FF"></div>
+    </div>
+    <div class="hexrow"><span>0B0B1E</span><span>1A1533</span><span>E84393</span><span>8E5CF7</span><span>FFB454</span><span>F5F2FF</span></div>
+  </div>
+
+  <div class="scheme s2">
+    <h2>2 · Neon Echo</h2>
+    <p class="tagline">Club basement: near-black blue, electric teal. Colder, techier, EDM-leaning.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div class="cell"><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div class="cell"><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div class="cell"><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div class="cell"><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div class="cell"><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div class="cell"><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar">
+        <div class="tab active"><div class="dot"></div>My Concerts</div>
+        <div class="tab"><div class="dot"></div>Upload</div>
+      </div>
+    </div></div>
+    <div class="swatches">
+      <div class="swatch" style="background:#060A0F"></div>
+      <div class="swatch" style="background:#10202B"></div>
+      <div class="swatch" style="background:#00E5C3"></div>
+      <div class="swatch" style="background:#29A8FF"></div>
+      <div class="swatch" style="background:#FFD166"></div>
+      <div class="swatch" style="background:#EDFDFB"></div>
+    </div>
+    <div class="hexrow"><span>060A0F</span><span>10202B</span><span>00E5C3</span><span>29A8FF</span><span>FFD166</span><span>EDFDFB</span></div>
+  </div>
+
+  <div class="scheme s3">
+    <h2>3 · Amber Stage</h2>
+    <p class="tagline">Warm tungsten and haze: espresso dark, amber spotlights. Intimate venue, indie/rock.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div class="cell"><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div class="cell"><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div class="cell"><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div class="cell"><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div class="cell"><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div class="cell"><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar">
+        <div class="tab active"><div class="dot"></div>My Concerts</div>
+        <div class="tab"><div class="dot"></div>Upload</div>
+      </div>
+    </div></div>
+    <div class="swatches">
+      <div class="swatch" style="background:#16100C"></div>
+      <div class="swatch" style="background:#291E16"></div>
+      <div class="swatch" style="background:#FF9F45"></div>
+      <div class="swatch" style="background:#E4572E"></div>
+      <div class="swatch" style="background:#94D266"></div>
+      <div class="swatch" style="background:#FFF6EC"></div>
+    </div>
+    <div class="hexrow"><span>16100C</span><span>291E16</span><span>FF9F45</span><span>E4572E</span><span>94D266</span><span>FFF6EC</span></div>
+  </div>
+
+  <div class="scheme s4">
+    <h2>4 · Daylight Festival</h2>
+    <p class="tagline">The outlier: warm paper light mode, violet + coral. Festival afternoon, friendlier, less moody.</p>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center &nbsp;·&nbsp; 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div class="cell"><div class="tile t1"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div class="cell"><div class="tile t2"></div><div class="tilelabel">family ties</div></div>
+        <div class="cell"><div class="tile t3"></div><div class="tilelabel">Unknown</div></div>
+        <div class="cell"><div class="tile t2"><span class="badge">▶ 1:05</span></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div class="cell"><div class="tile t3"></div><div class="tilelabel">vent</div></div>
+        <div class="cell"><div class="tile t1"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:10px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar">
+        <div class="tab active"><div class="dot"></div>My Concerts</div>
+        <div class="tab"><div class="dot"></div>Upload</div>
+      </div>
+    </div></div>
+    <div class="swatches">
+      <div class="swatch" style="background:#FAF7F2"></div>
+      <div class="swatch" style="background:#EFE9E0"></div>
+      <div class="swatch" style="background:#7C5CE0"></div>
+      <div class="swatch" style="background:#FF6B6B"></div>
+      <div class="swatch" style="background:#F08A11"></div>
+      <div class="swatch" style="background:#1F1A2E"></div>
+    </div>
+    <div class="hexrow"><span>FAF7F2</span><span>EFE9E0</span><span>7C5CE0</span><span>FF6B6B</span><span>F08A11</span><span>1F1A2E</span></div>
+  </div>
+
+</div>
+</body>
+</html>

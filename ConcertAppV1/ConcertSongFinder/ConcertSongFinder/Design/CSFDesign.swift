@@ -2,17 +2,29 @@ import SwiftUI
 
 enum CSFDesign {
     static let pageBackground = Color(hex: 0x0B0B1E)
-    static let surface = Color(hex: 0x1A1533)
-    static let raisedSurface = Color(hex: 0x1A1533)
+    static let surface = Color(hex: 0x1A1533).opacity(0.86)
+    static let raisedSurface = Color(hex: 0x211A3E)
+    static let deepSurface = Color(hex: 0x100D24)
     static let primary = Color(hex: 0xE84393)
     static let violet = Color(hex: 0x8E5CF7)
     static let amber = Color(hex: 0xFFB454)
     static let textPrimary = Color(hex: 0xF5F2FF)
+    static let textMuted = textPrimary.opacity(0.56)
     static let line = textPrimary.opacity(0.12)
+    static let cardRadius: CGFloat = 22
+    static let controlRadius: CGFloat = 18
 
     // Semantic aliases keep feature views expressive while staying on-palette.
     static let pink = primary
     static let blue = violet
+
+    static var stageWash: LinearGradient {
+        LinearGradient(
+            colors: [violet.opacity(0.72), primary.opacity(0.36), pageBackground.opacity(0.04)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 }
 
 struct CSFScreen<Content: View>: View {
@@ -23,8 +35,8 @@ struct CSFScreen<Content: View>: View {
             VStack(alignment: .leading, spacing: 18) {
                 content
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
+            .padding(.horizontal, 23)
+            .padding(.top, 24)
             .padding(.bottom, 120)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
@@ -44,9 +56,9 @@ struct CSFCard<Content: View>: View {
         }
         .padding(padding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CSFDesign.surface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(CSFDesign.surface, in: RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous)
                 .stroke(CSFDesign.line)
         }
     }
@@ -59,12 +71,14 @@ struct CSFSectionHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(CSFDesign.textPrimary)
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(3)
+                .foregroundStyle(CSFDesign.textMuted)
             if let subtitle {
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.64))
+                    .foregroundStyle(CSFDesign.textMuted)
             }
         }
     }
@@ -96,17 +110,11 @@ struct CSFMetricTile: View {
         .frame(minHeight: 112, alignment: .topLeading)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [tint.opacity(0.46), CSFDesign.raisedSurface],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            RoundedRectangle(cornerRadius: CSFDesign.controlRadius, style: .continuous)
+                .fill(CSFDesign.surface)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: CSFDesign.controlRadius, style: .continuous)
                 .stroke(tint.opacity(0.22))
         }
     }
@@ -116,7 +124,7 @@ struct CSFMetricGrid<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10)], alignment: .leading, spacing: 10) {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], alignment: .leading, spacing: 10) {
             content
         }
     }
@@ -145,7 +153,7 @@ struct CSFHeroLead: View {
                 .fixedSize(horizontal: false, vertical: true)
             Text(subtitle)
                 .font(.subheadline)
-                .foregroundStyle(CSFDesign.textPrimary.opacity(0.68))
+                .foregroundStyle(CSFDesign.textMuted)
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -180,7 +188,7 @@ struct CSFPrimaryButtonStyle: ButtonStyle {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
-            .background(CSFDesign.primary.opacity(configuration.isPressed ? 0.78 : 1), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(CSFDesign.primary.opacity(configuration.isPressed ? 0.78 : 1), in: RoundedRectangle(cornerRadius: CSFDesign.controlRadius, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
     }
 }
@@ -192,9 +200,9 @@ struct CSFSecondaryButtonStyle: ButtonStyle {
             .foregroundStyle(CSFDesign.textPrimary)
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
-            .background(CSFDesign.raisedSurface.opacity(configuration.isPressed ? 0.72 : 1), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(CSFDesign.raisedSurface.opacity(configuration.isPressed ? 0.72 : 1), in: RoundedRectangle(cornerRadius: CSFDesign.controlRadius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: CSFDesign.controlRadius, style: .continuous)
                     .stroke(CSFDesign.line)
             }
     }
@@ -240,5 +248,54 @@ extension View {
             .foregroundStyle(CSFDesign.textPrimary)
             .tint(CSFDesign.primary)
             .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+}
+
+struct CSFSearchField: View {
+    @Binding var text: String
+    let prompt: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.title3)
+                .foregroundStyle(CSFDesign.textMuted)
+            TextField(prompt, text: $text)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .foregroundStyle(CSFDesign.textPrimary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .background(CSFDesign.surface, in: RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous)
+                .stroke(CSFDesign.line)
+        }
+    }
+}
+
+struct StagePoster: View {
+    var body: some View {
+        ZStack {
+            CSFDesign.stageWash
+            LinearGradient(
+                colors: [.clear, CSFDesign.pageBackground.opacity(0.65)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            VStack {
+                HStack(spacing: 18) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        Capsule()
+                            .fill(CSFDesign.textPrimary.opacity(0.28))
+                            .frame(width: 10, height: 26)
+                            .blur(radius: 5)
+                    }
+                }
+                Spacer()
+            }
+            .padding(.top, 18)
+        }
     }
 }

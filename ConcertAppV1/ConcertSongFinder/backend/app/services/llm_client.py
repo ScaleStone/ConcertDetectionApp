@@ -53,7 +53,7 @@ class AnthropicSuggestionClient:
 
         body = {
             "model": self.settings.llm_model or DEFAULT_MODEL,
-            "max_tokens": 1500,
+            "max_tokens": 3000,
             "temperature": 0.2,
             "system": system_prompt,
             "messages": [{"role": "user", "content": content}],
@@ -124,7 +124,7 @@ class GeminiSuggestionClient:
             "contents": [{"role": "user", "parts": parts}],
             "generationConfig": {
                 "temperature": 0.2,
-                "maxOutputTokens": 2000,
+                "maxOutputTokens": 3000,
                 "responseMimeType": "application/json",
                 # Thinking tokens count against maxOutputTokens on 2.5
                 # models and can starve the actual JSON; this is a fast

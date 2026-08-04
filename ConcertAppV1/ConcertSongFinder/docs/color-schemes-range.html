@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aftershow → Muted: the pink dial</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif; background: #17181c; color: #eee; padding: 40px 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .intro { color: #9aa; font-size: 14px; margin-bottom: 32px; max-width: 900px; }
+  .schemes { display: flex; flex-wrap: wrap; gap: 26px; justify-content: center; }
+  .scheme { width: 265px; }
+  .scheme h2 { font-size: 15px; margin-bottom: 2px; }
+  .scheme .tagline { font-size: 11.5px; color: #99a; margin-bottom: 10px; min-height: 46px; }
+  .meter { height: 6px; border-radius: 3px; background: #2a2b33; margin-bottom: 10px; overflow: hidden; }
+  .meter div { height: 100%; background: linear-gradient(90deg, #E84393, #ff7ab8); border-radius: 3px; }
+  .phone { border-radius: 30px; overflow: hidden; border: 5px solid #000; box-shadow: 0 16px 36px rgba(0,0,0,.55); }
+  .screen { padding: 16px 12px 0; min-height: 500px; display: flex; flex-direction: column; background: #0B0B1E; }
+  .navtitle { font-size: 17px; font-weight: 700; color: #F5F2FF; }
+  .subtitle { font-size: 10.5px; margin-top: 2px; color: #9A93B8; }
+  .search { margin: 11px 0; padding: 7px 11px; border-radius: 9px; font-size: 11.5px; background: #1A1533; color: #9A93B8; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .tile { border-radius: 9px; aspect-ratio: 1; position: relative; overflow: hidden; }
+  .tile .badge { position: absolute; bottom: 4px; left: 4px; font-size: 7.5px; font-weight: 600; color: #fff; background: rgba(0,0,0,.55); padding: 2px 5px; border-radius: 7px; }
+  .tilelabel { font-size: 8.5px; font-weight: 600; margin-top: 3px; color: #F5F2FF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cta { margin: 12px 0 9px; padding: 10px; border-radius: 11px; text-align: center; font-size: 12px; font-weight: 700; color: #fff; }
+  .pill { display: inline-block; font-size: 8px; font-weight: 700; padding: 3px 7px; border-radius: 18px; margin-right: 4px; }
+  .tabbar { margin-top: auto; display: flex; justify-content: space-around; padding: 9px 0 14px; font-size: 9.5px; font-weight: 600; background: #1A1533; color: #9A93B8; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .tab .dot { width: 16px; height: 16px; border-radius: 4.5px; background: #3B2F5C; }
+
+  /* shared tile gradients */
+  .tv  { background: linear-gradient(135deg, #8E5CF7, #3B2A66); }   /* violet tile */
+  .tv2 { background: linear-gradient(135deg, #6C55C8, #2E2258); }   /* deep violet tile */
+  .tn  { background: linear-gradient(135deg, #4A3F7A, #1A1533); }   /* neutral tile */
+  .tp  { background: linear-gradient(135deg, #E84393, #5A2049); }   /* pink tile */
+
+  .pill-ok { background: rgba(61,220,151,.18); color: #3DDC97; }
+
+  /* Step 1 — 100% (original Aftershow) */
+  .p100 .cta { background: #E84393; }
+  .p100 .tab.active { color: #E84393; } .p100 .tab.active .dot { background: #E84393; }
+  .p100 .pill-warn { background: rgba(255,180,84,.18); color: #FFB454; }
+  .p100 .searchicon { color: #E84393; }
+
+  /* Step 2 — 75%: pink CTA + pink active tab, tiles calm down */
+  .p75 .cta { background: #E84393; }
+  .p75 .tab.active { color: #E84393; } .p75 .tab.active .dot { background: #E84393; }
+  .p75 .pill-warn { background: rgba(232,67,147,.16); color: #E84393; }
+
+  /* Step 3 — 50%: pink CTA only; navigation goes violet */
+  .p50 .cta { background: #E84393; }
+  .p50 .tab.active { color: #8E5CF7; } .p50 .tab.active .dot { background: #8E5CF7; }
+  .p50 .pill-warn { background: rgba(232,67,147,.16); color: #E84393; }
+
+  /* Step 4 — 25%: violet CTA; pink lives in badges + one highlight */
+  .p25 .cta { background: #8E5CF7; }
+  .p25 .tab.active { color: #8E5CF7; } .p25 .tab.active .dot { background: #8E5CF7; }
+  .p25 .pill-warn { background: rgba(232,67,147,.16); color: #E84393; }
+
+  /* Step 5 — 10% (Aftershow Muted): pink only in the warn pill */
+  .p10 .cta { background: #8E5CF7; }
+  .p10 .tab.active { color: #8E5CF7; } .p10 .tab.active .dot { background: #8E5CF7; }
+  .p10 .pill-warn { background: rgba(232,67,147,.16); color: #E84393; }
+</style>
+</head>
+<body>
+<h1>The Pink Dial — Aftershow → Aftershow Muted</h1>
+<p class="intro">Same palette, five settings of the dial. What changes at each step is which UI roles pink is allowed to own: tiles → tab bar → primary button → badges. Backgrounds, text, and violet stay identical throughout, so you're choosing exactly how loud the stage light is.</p>
+
+<div class="schemes">
+
+  <!-- 100% -->
+  <div class="scheme p100">
+    <h2>1 · Full Aftershow — 100%</h2>
+    <p class="tagline">Pink owns everything: button, active tab, and it shows up in the media accents. Loudest, most energetic.</p>
+    <div class="meter"><div style="width:100%"></div></div>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center · 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile tp"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile tv"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile tp"></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile tp"><span class="badge">▶ 1:05</span></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile tv"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:9px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+  </div>
+
+  <!-- 75% -->
+  <div class="scheme p75">
+    <h2>2 · Aftershow 75</h2>
+    <p class="tagline">Pink keeps the button and tab bar, but the media grid goes violet — your content stops competing with the brand color.</p>
+    <div class="meter"><div style="width:75%"></div></div>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center · 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile tv"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile tp"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile tv2"></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile tv"><span class="badge">▶ 1:05</span></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:9px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+  </div>
+
+  <!-- 50% -->
+  <div class="scheme p50">
+    <h2>3 · Aftershow 50</h2>
+    <p class="tagline">The balance point: pink is reserved for the ONE thing you want tapped (share/primary actions). Navigation and everything ambient is violet.</p>
+    <div class="meter"><div style="width:50%"></div></div>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center · 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile tv"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile tv2"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile tv2"></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile tv"><span class="badge">▶ 1:05</span></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:9px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+  </div>
+
+  <!-- 25% -->
+  <div class="scheme p25">
+    <h2>4 · Aftershow 25</h2>
+    <p class="tagline">Violet takes the button too. Pink appears only as small punctuation — badges and occasional highlights.</p>
+    <div class="meter"><div style="width:25%"></div></div>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center · 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile tv"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile tv2"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile tv2"></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile tv"><span class="badge">▶ 1:05</span></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:9px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+  </div>
+
+  <!-- 10% -->
+  <div class="scheme p10">
+    <h2>5 · Aftershow Muted — 10%</h2>
+    <p class="tagline">The muted end: pink survives only in the rare warning pill. Calm, violet-led, most understated.</p>
+    <div class="meter"><div style="width:10%"></div></div>
+    <div class="phone"><div class="screen">
+      <div class="navtitle">Baby Keem</div>
+      <div class="subtitle">May 13, 2026 • Moody Center · 2 videos • 4 photos</div>
+      <div class="search">🔍 Search by song name</div>
+      <div class="grid">
+        <div><div class="tile tv"><span class="badge">▶ 2:41</span></div><div class="tilelabel">Dramatic Girl</div></div>
+        <div><div class="tile tv2"></div><div class="tilelabel">family ties</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">Unknown</div></div>
+        <div><div class="tile tv2"></div><div class="tilelabel">ORANGE SODA</div></div>
+        <div><div class="tile tv"><span class="badge">▶ 1:05</span></div><div class="tilelabel">vent</div></div>
+        <div><div class="tile tn"></div><div class="tilelabel">16</div></div>
+      </div>
+      <div style="margin-top:9px"><span class="pill pill-ok">IDENTIFIED</span><span class="pill pill-warn">NEEDS REVIEW</span></div>
+      <div class="cta">⬆ Share with song tag</div>
+      <div class="tabbar"><div class="tab active"><div class="dot"></div>My Concerts</div><div class="tab"><div class="dot"></div>Upload</div></div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -21,6 +21,8 @@ struct SuggestionsRequestDTO: Encodable {
     let venue: String?
     let eventDate: String?
     let candidates: [SuggestionCandidateDTO]
+    /// Testing: ask the backend for a scored evaluation of every candidate.
+    let debug: Bool
 }
 
 struct PostSuggestionDTO: Decodable, Identifiable, Hashable {
@@ -33,10 +35,20 @@ struct PostSuggestionDTO: Decodable, Identifiable, Hashable {
     var id: String { candidateId }
 }
 
+struct CandidateEvaluationDTO: Decodable, Identifiable, Hashable {
+    let candidateId: String
+    let score: Int
+    let reasoning: String
+
+    var id: String { candidateId }
+}
+
 struct SuggestionsResponseDTO: Decodable {
     let suggestions: [PostSuggestionDTO]
     let promptVersion: String
     let trendBriefVersion: String
+    /// Present only when the request set debug=true.
+    let evaluations: [CandidateEvaluationDTO]?
 }
 
 // MARK: - Service
@@ -62,12 +74,12 @@ final class SuggestionService: ObservableObject {
     /// Cache key covers the concert's content (updatedAt changes whenever
     /// media/setlist change). The trend-brief version is server-side, so the
     /// cache is session-scoped only; a fresh launch picks up new briefs.
-    private func cacheKey(for concert: ConcertRecord) -> String {
-        "\(concert.id.uuidString)-\(concert.updatedAt.timeIntervalSince1970)"
+    private func cacheKey(for concert: ConcertRecord, includeScores: Bool) -> String {
+        "\(concert.id.uuidString)-\(concert.updatedAt.timeIntervalSince1970)-scores:\(includeScores)"
     }
 
-    func suggestions(for concert: ConcertRecord) async throws -> Result {
-        let key = cacheKey(for: concert)
+    func suggestions(for concert: ConcertRecord, includeScores: Bool = false) async throws -> Result {
+        let key = cacheKey(for: concert, includeScores: includeScores)
         if let cached = cache[key] {
             AppLog.postIdeas.info("Post ideas served from cache concert=\(concert.id.uuidString, privacy: .public)")
             return cached
@@ -82,10 +94,11 @@ final class SuggestionService: ObservableObject {
             concertTitle: concert.displayTitle,
             venue: concert.selectedSetlist?.venueName ?? concert.selectedConcert?.venueName,
             eventDate: concert.concertDate.map { Self.dateOnlyFormatter.string(from: $0) },
-            candidates: built.map(\.dto)
+            candidates: built.map(\.dto),
+            debug: includeScores
         )
 
-        AppLog.postIdeas.info("Requesting post ideas concert=\(concert.id.uuidString, privacy: .public) candidates=\(built.count, privacy: .public)")
+        AppLog.postIdeas.info("Requesting post ideas concert=\(concert.id.uuidString, privacy: .public) candidates=\(built.count, privacy: .public) scores=\(includeScores, privacy: .public)")
         // Generous timeout: Render free-tier cold start plus LLM latency.
         let response = try await client.post(
             "api/suggestions",

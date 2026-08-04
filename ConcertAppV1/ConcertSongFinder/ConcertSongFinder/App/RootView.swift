@@ -4,30 +4,57 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @State private var uploadRoute: UploadRoute = .upload
+    @State private var selectedTab: AppTab = AppTab.initial
 
     var body: some View {
         ZStack {
             CSFDesign.pageBackground.ignoresSafeArea()
 
-            TabView {
+            TabView(selection: $selectedTab) {
                 NavigationStack {
                     MyConcertsView()
                 }
                 .tabItem {
-                    Label("My Concerts", systemImage: "music.mic")
+                    Label("Library", systemImage: "house")
                 }
+                .tag(AppTab.library)
+
+                NavigationStack {
+                    SongClipsView()
+                }
+                .tabItem {
+                    Label("Clips", systemImage: "music.note.list")
+                }
+                .tag(AppTab.clips)
 
                 NavigationStack {
                     uploadFlow
                 }
                 .tabItem {
-                    Label("Upload", systemImage: "square.and.arrow.up")
+                    Label("Upload", systemImage: "plus.circle")
                 }
+                .tag(AppTab.upload)
+
+                NavigationStack {
+                    AnalysisDashboardView()
+                }
+                .tabItem {
+                    Label("Analysis", systemImage: "chart.bar")
+                }
+                .tag(AppTab.analysis)
+
+                NavigationStack {
+                    ProfileView()
+                }
+                .tabItem {
+                    Label("Profile", systemImage: "person")
+                }
+                .tag(AppTab.profile)
             }
         }
         .tint(CSFDesign.primary)
+        .toolbarBackground(selectedTab == .upload ? .hidden : .visible, for: .tabBar)
         .toolbarBackground(CSFDesign.surface, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
         .background(CSFDesign.pageBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
@@ -83,4 +110,27 @@ private enum UploadRoute {
     case upload
     case analysis(AnalysisRecord)
     case results(AnalysisRecord)
+}
+
+private enum AppTab: Hashable {
+    case library
+    case upload
+    case clips
+    case analysis
+    case profile
+
+    static var initial: AppTab {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-CSFInitialTab"),
+              arguments.indices.contains(index + 1) else {
+            return .library
+        }
+        switch arguments[index + 1].lowercased() {
+        case "upload": return .upload
+        case "clips": return .clips
+        case "analysis": return .analysis
+        case "profile": return .profile
+        default: return .library
+        }
+    }
 }

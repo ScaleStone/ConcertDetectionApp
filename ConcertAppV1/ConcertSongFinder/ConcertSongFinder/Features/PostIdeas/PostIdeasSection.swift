@@ -14,6 +14,8 @@ struct PostIdeasSection: View {
 
     @EnvironmentObject private var environment: AppEnvironment
     @AppStorage("postIdeasConsentGranted") private var consentGranted = false
+    /// Testing: request per-candidate scores + reasoning from the model.
+    @AppStorage("postIdeasShowScores") private var showScores = false
     @State private var showConsentSheet = false
     @State private var isLoading = false
     @State private var result: SuggestionService.Result?
@@ -60,6 +62,19 @@ struct PostIdeasSection: View {
                         }
                     }
                 }
+                if showScores {
+                    if let evaluations = result.response.evaluations {
+                        AIScoresPanel(
+                            evaluations: evaluations,
+                            pickedIDs: Set(result.response.suggestions.map(\.candidateId)),
+                            candidatesByID: result.candidatesByID
+                        )
+                    } else {
+                        Text("Scores were not requested for this result. Tap Refresh to re-run with scoring.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } else if consentGranted {
                 Button {
                     requestIdeas()
@@ -89,6 +104,11 @@ struct PostIdeasSection: View {
             }
         }
         .sheet(item: $shareRequest) { ShareMediaSheet(request: $0) }
+        .onChange(of: showScores) {
+            // Re-run with/without scoring when the testing toggle flips
+            // (cached results per mode make flipping back instant).
+            if result != nil { requestIdeas() }
+        }
     }
 
     private var header: some View {
@@ -102,6 +122,7 @@ struct PostIdeasSection: View {
                         dismissedCandidateIDs = []
                         requestIdeas()
                     }
+                    Toggle("Show AI Scores (Testing)", isOn: $showScores)
                     Button("Turn Off Post Ideas", role: .destructive) {
                         consentGranted = false
                         result = nil
@@ -123,7 +144,7 @@ struct PostIdeasSection: View {
         errorMessage = nil
         Task {
             do {
-                let fetched = try await environment.postSuggestionService.suggestions(for: concert)
+                let fetched = try await environment.postSuggestionService.suggestions(for: concert, includeScores: showScores)
                 result = fetched
             } catch is CancellationError {
                 // View went away; nothing to show.
@@ -168,6 +189,73 @@ struct PostIdeasSection: View {
     private func dismissIdea(_ suggestion: PostSuggestionDTO, result: SuggestionService.Result) {
         environment.postSuggestionService.logOutcome("dismissed", suggestion: suggestion, response: result.response, concert: concert)
         withAnimation { _ = dismissedCandidateIDs.insert(suggestion.candidateId) }
+    }
+}
+
+// MARK: - AI Scores (testing)
+
+/// Testing panel: the model's score and reasoning for EVERY candidate it
+/// considered, sorted by score, with the actual picks highlighted. Visible
+/// only when "Show AI Scores (Testing)" is enabled in the section menu.
+private struct AIScoresPanel: View {
+    let evaluations: [CandidateEvaluationDTO]
+    let pickedIDs: Set<String>
+    let candidatesByID: [String: SuggestionCandidateBuilder.BuiltCandidate]
+
+    var body: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(evaluations) { evaluation in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("\(evaluation.score)")
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .frame(width: 40, height: 28)
+                            .background(scoreColor(evaluation.score).opacity(0.18), in: RoundedRectangle(cornerRadius: 6))
+                            .foregroundStyle(scoreColor(evaluation.score))
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(label(for: evaluation.candidateId))
+                                    .font(.caption.weight(.semibold))
+                                    .lineLimit(1)
+                                if pickedIDs.contains(evaluation.candidateId) {
+                                    Text("PICKED")
+                                        .font(.caption2.weight(.bold))
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(.tint.opacity(0.15), in: Capsule())
+                                        .foregroundStyle(.tint)
+                                }
+                            }
+                            Text(evaluation.reasoning)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding(.top, 8)
+        } label: {
+            Label("AI Scores (Testing) — \(evaluations.count) candidates", systemImage: "chart.bar.doc.horizontal")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(10)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func label(for candidateId: String) -> String {
+        guard let candidate = candidatesByID[candidateId] else { return candidateId }
+        let kind = candidate.dto.kind == "video" ? "🎬" : "📷"
+        return "\(kind) \(candidate.item.displayLabel)"
+    }
+
+    private func scoreColor(_ score: Int) -> Color {
+        switch score {
+        case 75...: return .green
+        case 45..<75: return .orange
+        default: return .red
+        }
     }
 }
 

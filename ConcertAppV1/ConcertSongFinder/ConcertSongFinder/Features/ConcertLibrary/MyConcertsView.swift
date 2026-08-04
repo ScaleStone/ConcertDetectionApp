@@ -9,38 +9,70 @@ struct MyConcertsView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @State private var concerts: [ConcertRecord] = []
     @State private var errorMessage: String?
+    @State private var searchText = ""
+
+    private var filteredConcerts: [ConcertRecord] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return concerts }
+        return concerts.filter {
+            $0.displayTitle.localizedCaseInsensitiveContains(query)
+                || $0.displaySubtitle.localizedCaseInsensitiveContains(query)
+        }
+    }
 
     var body: some View {
-        List {
-            if let errorMessage {
-                Section { Label(errorMessage, systemImage: "exclamationmark.triangle").foregroundStyle(CSFDesign.amber) }
-                    .listRowBackground(CSFDesign.surface)
+        CSFScreen {
+            HStack(alignment: .firstTextBaseline) {
+                Text("My Concerts")
+                    .font(.system(size: 44, weight: .bold))
+                    .foregroundStyle(CSFDesign.textPrimary)
+                    .minimumScaleFactor(0.72)
+                Spacer()
             }
-            Section("My Concerts") {
-                if concerts.isEmpty {
-                    ContentUnavailableView("No concerts yet", systemImage: "music.mic", description: Text("Upload concert media to create your first concert."))
-                } else {
-                    ForEach(concerts) { concert in
-                        NavigationLink { ConcertDetailView(concert: concert) } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(concert.displayTitle).font(.headline)
-                                if !concert.displaySubtitle.isEmpty {
-                                    Text(concert.displaySubtitle).font(.subheadline).foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
-                                }
-                                Text("\(concert.videos.count) videos • \(concert.photos.count) photos")
-                                    .font(.caption)
-                                    .foregroundStyle(CSFDesign.textPrimary.opacity(0.60))
-                            }
-                        }
-                    }
-                    .onDelete(perform: deleteConcerts)
+
+            CSFSearchField(text: $searchText, prompt: "Search artist or venue")
+
+            if let errorMessage {
+                CSFCard {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(CSFDesign.amber)
                 }
             }
-            .listRowBackground(CSFDesign.surface)
+
+            if let activeConcert = filteredConcerts.first(where: { $0.currentStage != .completed }) {
+                CSFSectionHeader(title: "Analysis in progress")
+                NavigationLink { ConcertDetailView(concert: activeConcert) } label: {
+                    InProgressConcertCard(concert: activeConcert)
+                }
+                .buttonStyle(.plain)
+            }
+
+            CSFSectionHeader(title: "Recently archived")
+            if filteredConcerts.isEmpty {
+                CSFCard(padding: 22) {
+                    CSFHeroLead(
+                        icon: "music.mic",
+                        title: searchText.isEmpty ? "No concerts yet" : "No matching concerts",
+                        subtitle: searchText.isEmpty ? "Upload concert media to create your first concert library entry." : "Try another artist, venue, or date.",
+                        tint: CSFDesign.violet
+                    )
+                }
+            } else {
+                VStack(spacing: 14) {
+                    ForEach(filteredConcerts) { concert in
+                        NavigationLink { ConcertDetailView(concert: concert) } label: {
+                            ConcertArchiveCard(concert: concert) {
+                                deleteConcert(concert)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
-        .csfListChrome()
-        .navigationTitle("My Concerts")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .task { loadConcerts() }
         .refreshable { loadConcerts() }
     }
@@ -59,14 +91,18 @@ struct MyConcertsView: View {
     private func deleteConcerts(at offsets: IndexSet) {
         for index in offsets {
             let concert = concerts[index]
-            do {
-                try environment.concertLibraryStore.deleteConcert(id: concert.id)
-                cleanUpOrphanedMediaFiles(for: concert)
-                AppLog.concertLibrary.info("Deleted concert from My Concerts concert=\(concert.id.uuidString, privacy: .public)")
-            } catch {
-                errorMessage = "Could not delete concert."
-                AppLog.concertLibrary.error("Delete concert failed concert=\(concert.id.uuidString, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
-            }
+            deleteConcert(concert)
+        }
+    }
+
+    private func deleteConcert(_ concert: ConcertRecord) {
+        do {
+            try environment.concertLibraryStore.deleteConcert(id: concert.id)
+            cleanUpOrphanedMediaFiles(for: concert)
+            AppLog.concertLibrary.info("Deleted concert from My Concerts concert=\(concert.id.uuidString, privacy: .public)")
+        } catch {
+            errorMessage = "Could not delete concert."
+            AppLog.concertLibrary.error("Delete concert failed concert=\(concert.id.uuidString, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
         }
         loadConcerts()
     }
@@ -99,6 +135,139 @@ struct MyConcertsView: View {
                 AppLog.concertLibrary.error("Could not remove orphaned media file \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
+    }
+}
+
+private struct InProgressConcertCard: View {
+    let concert: ConcertRecord
+
+    var body: some View {
+        HStack(spacing: 14) {
+            StagePoster()
+                .frame(width: 92, height: 92)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(concert.displayTitle)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(CSFDesign.textPrimary)
+                    .lineLimit(1)
+                Text(statusText)
+                    .font(.subheadline)
+                    .foregroundStyle(CSFDesign.textMuted)
+                ProgressView(value: progress)
+                    .tint(CSFDesign.primary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(CSFDesign.surface, in: RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous))
+        .overlay(alignment: .top) {
+            Capsule()
+                .fill(CSFDesign.primary)
+                .frame(height: 5)
+                .padding(.horizontal, 20)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous)
+                .stroke(CSFDesign.violet.opacity(0.24))
+        }
+    }
+
+    private var progress: Double {
+        switch concert.currentStage {
+        case .completed: 1
+        case .idle: 0.08
+        case .extractingAudio: 0.2
+        case .checkingShazam: 0.4
+        case .buildingTimeline: 0.6
+        case .checkingSetlist, .transcribing, .comparingLyrics: 0.78
+        case .canceled: 0.5
+        }
+    }
+
+    private var statusText: String {
+        "\(concert.currentStage.rawValue) (\(identifiedTrackCount) tracks found)"
+    }
+
+    private var identifiedTrackCount: Int {
+        Set(concert.videos.flatMap(\.segments).compactMap { $0.primaryCandidate?.song.id }).count
+    }
+}
+
+private struct ConcertArchiveCard: View {
+    let concert: ConcertRecord
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ZStack(alignment: .topTrailing) {
+                StagePoster()
+                    .frame(height: 150)
+                    .clipShape(RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous))
+                Menu {
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete concert", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.headline)
+                        .foregroundStyle(CSFDesign.textPrimary)
+                        .frame(width: 42, height: 42)
+                        .background(.black.opacity(0.34), in: Circle())
+                        .padding(10)
+                }
+                .accessibilityLabel("Concert actions")
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(concert.displayTitle)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(CSFDesign.textPrimary)
+                    Spacer()
+                    Text(statusLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(statusColor)
+                }
+                if !concert.displaySubtitle.isEmpty {
+                    Text(concert.displaySubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(CSFDesign.textMuted)
+                }
+                HStack(spacing: 10) {
+                    Label("\(concert.videos.count) clips", systemImage: "video")
+                    Label("\(identifiedTrackCount) tracks identified", systemImage: "music.note")
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(CSFDesign.textMuted)
+            }
+        }
+        .padding(14)
+        .background(CSFDesign.surface, in: RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: CSFDesign.cardRadius, style: .continuous)
+                .stroke(CSFDesign.line)
+        }
+    }
+
+    private var identifiedTrackCount: Int {
+        Set(concert.videos.flatMap(\.segments).compactMap { $0.primaryCandidate?.song.id }).count
+    }
+
+    private var needsReviewCount: Int {
+        concert.videos.flatMap(\.segments).filter { [.likely, .possible, .unknown].contains($0.status) }.count
+    }
+
+    private var statusLabel: String {
+        if needsReviewCount > 0 { return "Needs review" }
+        if identifiedTrackCount > 0 { return "Perfect" }
+        return "Imported"
+    }
+
+    private var statusColor: Color {
+        needsReviewCount > 0 ? CSFDesign.amber : CSFDesign.primary
     }
 }
 

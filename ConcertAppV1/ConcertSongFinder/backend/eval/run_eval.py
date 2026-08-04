@@ -66,7 +66,17 @@ class DeterministicMockLLM:
             }
             for index, candidate in enumerate(ranked)
         ]
-        return json.dumps({"suggestions": suggestions})
+        payload = {"suggestions": suggestions}
+        if request.debug:
+            payload["evaluations"] = [
+                {
+                    "candidateId": candidate.id,
+                    "score": min(100, score(candidate) * 10),
+                    "reasoning": "Mock score from rarity/encore/identified metadata.",
+                }
+                for candidate in request.candidates
+            ]
+        return json.dumps(payload)
 
 
 def load_fixtures() -> list[dict]:
