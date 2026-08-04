@@ -13,6 +13,10 @@ struct RootView: View {
             currentTabView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+            bottomNavigationGradient
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .allowsHitTesting(false)
+
             FloatingTabBar(selectedTab: $selectedTab)
                 .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -22,6 +26,22 @@ struct RootView: View {
         .tint(CSFDesign.primary)
         .background(CSFDesign.pageBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
+    }
+
+    private var bottomNavigationGradient: some View {
+        LinearGradient(
+            colors: [
+                .clear,
+                Color.black.opacity(0.10),
+                Color(red: 0.42, green: 0.43, blue: 0.43).opacity(0.34),
+                Color.black.opacity(0.44)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(height: 154)
+        .blur(radius: 0.4)
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     @ViewBuilder
@@ -152,7 +172,7 @@ private struct FloatingTabBar: View {
     private let tabs: [AppTab] = [.library, .clips, .upload, .analysis, .profile]
 
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: 12) {
             ForEach(tabs, id: \.self) { tab in
                 Button {
                     withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
@@ -166,19 +186,51 @@ private struct FloatingTabBar: View {
                 .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .padding(.vertical, 5)
         .frame(height: 48)
         .background {
             Capsule()
-                .fill(.ultraThinMaterial)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.46, green: 0.48, blue: 0.48).opacity(0.50),
+                            Color(red: 0.18, green: 0.19, blue: 0.19).opacity(0.76),
+                            Color.black.opacity(0.66)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(.ultraThinMaterial, in: Capsule())
                 .overlay {
                     Capsule()
-                        .fill(Color.black.opacity(0.20))
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    CSFDesign.textPrimary.opacity(0.12),
+                                    .clear
+                                ],
+                                center: .topLeading,
+                                startRadius: 8,
+                                endRadius: 210
+                            )
+                        )
                 }
                 .overlay {
                     Capsule()
-                        .stroke(CSFDesign.textPrimary.opacity(0.16), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    CSFDesign.textPrimary.opacity(0.26),
+                                    CSFDesign.textPrimary.opacity(0.06),
+                                    Color.black.opacity(0.16)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
                 }
                 .shadow(color: .black.opacity(0.30), radius: 16, y: 8)
         }
@@ -191,15 +243,24 @@ private struct FloatingTabBar: View {
         ZStack {
             if isSelected {
                 Capsule()
-                    .fill(CSFDesign.textPrimary.opacity(tab == .upload ? 0.18 : 0.14))
-                    .frame(width: tab == .upload ? 58 : 52, height: 36)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                CSFDesign.textPrimary.opacity(0.28),
+                                CSFDesign.textPrimary.opacity(0.16)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: tab == .upload ? 66 : 58, height: 36)
                     .matchedGeometryEffect(id: "selectedTab", in: selectionNamespace)
             }
 
             Image(systemName: tab.icon)
                 .font(.system(size: tab == .upload ? 20 : 21, weight: .semibold))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(tab == .upload && isSelected ? CSFDesign.primary : CSFDesign.textPrimary)
+                .foregroundStyle(CSFDesign.textPrimary)
 
             if tab == .clips {
                 Circle()
@@ -209,7 +270,7 @@ private struct FloatingTabBar: View {
                     .opacity(isSelected ? 1 : 0.88)
             }
         }
-        .frame(width: tab == .upload ? 58 : 50, height: 38)
+        .frame(width: tab == .upload ? 66 : 54, height: 38)
         .contentShape(Rectangle())
     }
 }
