@@ -8,12 +8,18 @@ struct HomeView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @StateObject private var viewModelHolder = ViewModelHolder()
     var isActive: Bool = true
+    var openUploadPickerRequest = 0
     let onImported: (ConcertMediaImport) -> Void
 
     var body: some View {
         Group {
             if let viewModel = viewModelHolder.viewModel {
-                HomeContentView(viewModel: viewModel, isActive: isActive, onImported: onImported)
+                HomeContentView(
+                    viewModel: viewModel,
+                    isActive: isActive,
+                    openUploadPickerRequest: openUploadPickerRequest,
+                    onImported: onImported
+                )
             } else {
                 ProgressView()
                     .task {
@@ -32,8 +38,11 @@ struct HomeView: View {
 private struct HomeContentView: View {
     @ObservedObject var viewModel: HomeViewModel
     let isActive: Bool
+    let openUploadPickerRequest: Int
     let onImported: (ConcertMediaImport) -> Void
     @State private var focusedUploadItemID: UploadFeedItem.ID?
+    @State private var isUploadPickerPresented = false
+    @State private var handledUploadPickerRequest = 0
 
     var body: some View {
         GeometryReader { proxy in
@@ -86,17 +95,30 @@ private struct HomeContentView: View {
                 if focusedUploadItemID == nil {
                     focusedUploadItemID = feedItems.first?.id
                 }
+                presentUploadPickerIfNeeded(openUploadPickerRequest)
             }
             .onChange(of: feedItems.map(\.id)) { _, ids in
                 if focusedUploadItemID.map({ ids.contains($0) }) != true {
                     focusedUploadItemID = ids.first
                 }
             }
+            .onChange(of: openUploadPickerRequest) { _, request in
+                presentUploadPickerIfNeeded(request)
+            }
         }
         .ignoresSafeArea()
         .refreshable {
             viewModel.load()
         }
+        .photosPicker(
+            isPresented: $isUploadPickerPresented,
+            selection: Binding(
+                get: { viewModel.selectedItems },
+                set: { viewModel.selectedItems = $0 }
+            ),
+            maxSelectionCount: 0,
+            matching: .any(of: [.videos, .images])
+        )
         .onChange(of: viewModel.selectedItems) { _, items in
             guard !items.isEmpty else { return }
             Task {
@@ -105,6 +127,13 @@ private struct HomeContentView: View {
                 }
             }
         }
+    }
+
+    private func presentUploadPickerIfNeeded(_ request: Int) {
+        guard request > handledUploadPickerRequest else { return }
+        handledUploadPickerRequest = request
+        guard !viewModel.isImporting else { return }
+        isUploadPickerPresented = true
     }
 
     private var uploadPicker: some View {

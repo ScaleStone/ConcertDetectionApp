@@ -5,6 +5,7 @@ struct RootView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @State private var uploadRoute: UploadRoute = .upload
     @State private var selectedTab: AppTab = AppTab.initial
+    @State private var uploadPickerRequest = 0
 
     var body: some View {
         ZStack {
@@ -17,7 +18,10 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .allowsHitTesting(false)
 
-            FloatingTabBar(selectedTab: $selectedTab)
+            FloatingTabBar(selectedTab: $selectedTab) {
+                uploadRoute = .upload
+                uploadPickerRequest += 1
+            }
                 .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .ignoresSafeArea(.container, edges: .bottom)
@@ -74,7 +78,7 @@ struct RootView: View {
     private var uploadFlow: some View {
         switch uploadRoute {
         case .upload:
-            HomeView(isActive: selectedTab == .upload) { mediaImport in
+            HomeView(isActive: selectedTab == .upload, openUploadPickerRequest: uploadPickerRequest) { mediaImport in
                 // Analysis starts immediately after import; concert
                 // assignment is fully automatic (identification first,
                 // timestamp fallback otherwise) at persistence time.
@@ -167,6 +171,7 @@ private enum AppTab: Hashable, CaseIterable {
 
 private struct FloatingTabBar: View {
     @Binding var selectedTab: AppTab
+    let onUploadSelectedAgain: () -> Void
     @Namespace private var selectionNamespace
 
     private let tabs: [AppTab] = [.library, .clips, .upload, .analysis, .profile]
@@ -176,7 +181,12 @@ private struct FloatingTabBar: View {
             ForEach(tabs, id: \.self) { tab in
                 Button {
                     withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
-                        selectedTab = tab
+                        if tab == .upload {
+                            selectedTab = .upload
+                            onUploadSelectedAgain()
+                        } else {
+                            selectedTab = tab
+                        }
                     }
                 } label: {
                     tabIcon(for: tab)
