@@ -10,54 +10,45 @@ struct RootView: View {
         ZStack {
             CSFDesign.pageBackground.ignoresSafeArea()
 
-            TabView(selection: $selectedTab) {
-                NavigationStack {
-                    MyConcertsView()
-                }
-                .tabItem {
-                    Label("Library", systemImage: "house")
-                }
-                .tag(AppTab.library)
+            currentTabView
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                NavigationStack {
-                    SongClipsView()
-                }
-                .tabItem {
-                    Label("Clips", systemImage: "music.note.list")
-                }
-                .tag(AppTab.clips)
-
-                NavigationStack {
-                    uploadFlow
-                }
-                .tabItem {
-                    Label("Upload", systemImage: "plus.circle")
-                }
-                .tag(AppTab.upload)
-
-                NavigationStack {
-                    AnalysisDashboardView()
-                }
-                .tabItem {
-                    Label("Analysis", systemImage: "chart.bar")
-                }
-                .tag(AppTab.analysis)
-
-                NavigationStack {
-                    ProfileView()
-                }
-                .tabItem {
-                    Label("Profile", systemImage: "person")
-                }
-                .tag(AppTab.profile)
-            }
+            FloatingTabBar(selectedTab: $selectedTab)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 18)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .ignoresSafeArea(.container, edges: .bottom)
+                .ignoresSafeArea(.keyboard)
         }
         .tint(CSFDesign.primary)
-        .toolbarBackground(selectedTab == .upload ? .hidden : .visible, for: .tabBar)
-        .toolbarBackground(CSFDesign.surface, for: .tabBar)
-        .toolbarColorScheme(.dark, for: .tabBar)
         .background(CSFDesign.pageBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
+    }
+
+    @ViewBuilder
+    private var currentTabView: some View {
+        switch selectedTab {
+        case .library:
+            NavigationStack {
+                MyConcertsView()
+            }
+        case .clips:
+            NavigationStack {
+                SongClipsView()
+            }
+        case .upload:
+            NavigationStack {
+                uploadFlow
+            }
+        case .analysis:
+            NavigationStack {
+                AnalysisDashboardView()
+            }
+        case .profile:
+            NavigationStack {
+                ProfileView()
+            }
+        }
     }
 
     @ViewBuilder
@@ -112,12 +103,32 @@ private enum UploadRoute {
     case results(AnalysisRecord)
 }
 
-private enum AppTab: Hashable {
+private enum AppTab: Hashable, CaseIterable {
     case library
     case upload
     case clips
     case analysis
     case profile
+
+    var title: String {
+        switch self {
+        case .library: "Library"
+        case .clips: "Clips"
+        case .upload: "Upload"
+        case .analysis: "Analysis"
+        case .profile: "Profile"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .library: "house"
+        case .clips: "music.note.list"
+        case .upload: "plus"
+        case .analysis: "chart.bar.fill"
+        case .profile: "person.crop.circle"
+        }
+    }
 
     static var initial: AppTab {
         let arguments = ProcessInfo.processInfo.arguments
@@ -132,5 +143,74 @@ private enum AppTab: Hashable {
         case "profile": return .profile
         default: return .library
         }
+    }
+}
+
+private struct FloatingTabBar: View {
+    @Binding var selectedTab: AppTab
+    @Namespace private var selectionNamespace
+
+    private let tabs: [AppTab] = [.library, .clips, .upload, .analysis, .profile]
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(tabs, id: \.self) { tab in
+                Button {
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+                        selectedTab = tab
+                    }
+                } label: {
+                    tabIcon(for: tab)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tab.title)
+                .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
+            }
+        }
+        .padding(.horizontal, 15)
+        .padding(.vertical, 8)
+        .frame(height: 66)
+        .background {
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    Capsule()
+                        .fill(Color.black.opacity(0.20))
+                }
+                .overlay {
+                    Capsule()
+                        .stroke(CSFDesign.textPrimary.opacity(0.16), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.34), radius: 24, y: 14)
+        }
+    }
+
+    @ViewBuilder
+    private func tabIcon(for tab: AppTab) -> some View {
+        let isSelected = selectedTab == tab
+
+        ZStack {
+            if isSelected {
+                Capsule()
+                    .fill(CSFDesign.textPrimary.opacity(tab == .upload ? 0.18 : 0.14))
+                    .matchedGeometryEffect(id: "selectedTab", in: selectionNamespace)
+            }
+
+            Image(systemName: tab.icon)
+                .font(.system(size: tab == .upload ? 24 : 25, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(tab == .upload && isSelected ? CSFDesign.primary : CSFDesign.textPrimary)
+
+            if tab == .clips {
+                Circle()
+                    .fill(CSFDesign.primary)
+                    .frame(width: 7, height: 7)
+                    .offset(x: 21, y: 16)
+                    .opacity(isSelected ? 1 : 0.88)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 50)
+        .contentShape(Rectangle())
     }
 }

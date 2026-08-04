@@ -409,7 +409,7 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
                 clipProgress
                     .frame(height: 3)
                     .padding(.horizontal, 18)
-                    .padding(.bottom, 82)
+                    .padding(.bottom, 118)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
 
@@ -520,17 +520,12 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(CSFDesign.textPrimary.opacity(0.18))
-                    .overlay {
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                            .opacity(0.18)
-                    }
+                    .fill(CSFDesign.textPrimary.opacity(0.36))
 
                 Capsule()
-                    .fill(CSFDesign.textPrimary.opacity(0.96))
+                    .fill(CSFDesign.textPrimary.opacity(0.98))
                     .frame(width: max(4, proxy.size.width * progress))
-                    .shadow(color: CSFDesign.textPrimary.opacity(0.38), radius: 5, y: 1)
+                    .shadow(color: CSFDesign.textPrimary.opacity(0.42), radius: 5, y: 1)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
