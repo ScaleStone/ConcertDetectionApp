@@ -220,12 +220,12 @@ enum SuggestionCandidateBuilder {
     private static func videoFrames(url: URL, start: TimeInterval, end: TimeInterval, count: Int) async -> [UIImage] {
         let span = max(0, end - start)
         let inset = min(0.5, span / 4)
-        let times: [TimeInterval]
+        let preferredTimes: [TimeInterval]
         if span < 2 || count < 2 {
-            times = [start + span / 2]
+            preferredTimes = [start + span / 2]
         } else {
             let usable = span - inset * 2
-            times = (0..<count).map { index in
+            preferredTimes = (0..<count).map { index in
                 start + inset + usable * Double(index) / Double(count - 1)
             }
         }
@@ -235,15 +235,36 @@ enum SuggestionCandidateBuilder {
             let generator = AVAssetImageGenerator(asset: asset)
             generator.appliesPreferredTrackTransform = true
             generator.maximumSize = CGSize(width: maxFramePixels, height: maxFramePixels)
-            generator.requestedTimeToleranceBefore = CMTime(seconds: 0.5, preferredTimescale: 600)
-            generator.requestedTimeToleranceAfter = CMTime(seconds: 0.5, preferredTimescale: 600)
+            generator.requestedTimeToleranceBefore = CMTime(seconds: 1.0, preferredTimescale: 600)
+            generator.requestedTimeToleranceAfter = CMTime(seconds: 1.0, preferredTimescale: 600)
 
             var images: [UIImage] = []
-            for seconds in times {
+            for seconds in preferredTimes {
                 let time = CMTime(seconds: seconds, preferredTimescale: 600)
                 if let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) {
                     images.append(UIImage(cgImage: cgImage))
+                } else {
+                    AppLog.postIdeas.error("Suggestion frame extraction failed file=\(url.lastPathComponent, privacy: .public) second=\(seconds, privacy: .public)")
                 }
+            }
+
+            if images.isEmpty {
+                let fallbackSeconds = [
+                    start + span / 2,
+                    min(max(start + 0.25, 0), max(end - 0.25, 0)),
+                    0
+                ]
+                for seconds in fallbackSeconds {
+                    let time = CMTime(seconds: max(seconds, 0), preferredTimescale: 600)
+                    if let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) {
+                        images.append(UIImage(cgImage: cgImage))
+                        break
+                    }
+                }
+            }
+
+            if images.isEmpty {
+                AppLog.postIdeas.error("Suggestion frame extraction produced no frames file=\(url.lastPathComponent, privacy: .public) start=\(start, privacy: .public) end=\(end, privacy: .public)")
             }
             return images
         }.value

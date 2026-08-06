@@ -89,7 +89,7 @@ final class BackendAPIClient {
                 throw ConcertSongFinderError.backendUnavailable
             default:
                 AppLog.network.error("Backend returned unexpected status url=\(requestURL, privacy: .public) status=\(http.statusCode, privacy: .public) body=\(responseBody.prefix(500), privacy: .public)")
-                throw ConcertSongFinderError.unknown("Backend request failed with HTTP \(http.statusCode). Check backend logs for details.")
+                throw ConcertSongFinderError.unknown(Self.backendErrorMessage(statusCode: http.statusCode, body: data))
             }
         } catch let error as ConcertSongFinderError {
             throw error
@@ -138,5 +138,21 @@ final class BackendAPIClient {
             in: container,
             debugDescription: "Unsupported backend date format: \(value)"
         )
+    }
+
+    private static func backendErrorMessage(statusCode: Int, body: Data) -> String {
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
+            return "Backend request failed with HTTP \(statusCode). Check backend logs for details."
+        }
+        if let message = jsonObject["message"] as? String, !message.isEmpty {
+            return message
+        }
+        if let code = jsonObject["code"] as? String, !code.isEmpty {
+            return "Backend request failed with HTTP \(statusCode): \(code)"
+        }
+        if let detail = jsonObject["detail"] {
+            return "Backend request failed with HTTP \(statusCode): \(detail)"
+        }
+        return "Backend request failed with HTTP \(statusCode). Check backend logs for details."
     }
 }

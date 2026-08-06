@@ -1,26 +1,29 @@
 import SwiftUI
 
 enum CSFDesign {
-    static let pageBackground = Color(hex: 0x0B0B1E)
-    static let surface = Color(hex: 0x1A1533).opacity(0.86)
-    static let raisedSurface = Color(hex: 0x211A3E)
-    static let deepSurface = Color(hex: 0x100D24)
-    static let primary = Color(hex: 0xE84393)
-    static let violet = Color(hex: 0x8E5CF7)
-    static let amber = Color(hex: 0xFFB454)
-    static let textPrimary = Color(hex: 0xF5F2FF)
-    static let textMuted = textPrimary.opacity(0.56)
-    static let line = textPrimary.opacity(0.12)
+    static let pageBackground = Color(hex: 0x0B0D0F)
+    static let surface = Color(hex: 0x16191E)
+    static let raisedSurface = Color(hex: 0x2A2F37)
+    static let deepSurface = Color(hex: 0x0B0D0F)
+    static let primary = Color(hex: 0xCCFF00)
+    static let violet = Color(hex: 0x2C351E)
+    static let amber = Color(hex: 0xCCFF00)
+    static let textPrimary = Color(hex: 0xEAECEF)
+    static let textMuted = Color(hex: 0x8E9AA8)
+    static let line = Color(hex: 0x2A2F37)
     static let cardRadius: CGFloat = 22
     static let controlRadius: CGFloat = 18
 
     // Semantic aliases keep feature views expressive while staying on-palette.
     static let pink = primary
     static let blue = violet
+    static let accentAcid = primary
+    static let accentMud = violet
+    static let border = line
 
     static var stageWash: LinearGradient {
         LinearGradient(
-            colors: [violet.opacity(0.72), primary.opacity(0.36), pageBackground.opacity(0.04)],
+            colors: [accentMud.opacity(0.82), accentAcid.opacity(0.26), pageBackground.opacity(0.06)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -36,7 +39,7 @@ struct CSFScreen<Content: View>: View {
                 content
             }
             .padding(.horizontal, 23)
-            .padding(.top, 24)
+            .padding(.top, 76)
             .padding(.bottom, 120)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
@@ -184,7 +187,7 @@ struct CSFPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline.weight(.semibold))
-            .foregroundStyle(CSFDesign.textPrimary)
+            .foregroundStyle(CSFDesign.pageBackground)
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)

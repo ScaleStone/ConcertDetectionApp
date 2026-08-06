@@ -195,6 +195,8 @@ struct PostIdeasSection: View {
             return "Post ideas are getting a lot of requests right now. Wait a minute and try again. If it keeps happening all day, the daily limit may be reached."
         case .backendUnavailable:
             return "Post ideas are temporarily unavailable. Your concerts are unaffected."
+        case .unknown(let message):
+            return message
         default:
             return "Post ideas aren't available right now. Check your connection and try again."
         }

@@ -396,7 +396,7 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
             LinearGradient(
                 colors: item.demoClipURL == nil
                     ? [.black.opacity(0.08), CSFDesign.pageBackground.opacity(0.42), CSFDesign.pageBackground.opacity(0.92)]
-                    : [.black.opacity(0.10), .clear, .black.opacity(0.58)],
+                    : [.black.opacity(0.04), .clear, .black.opacity(0.58)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -405,9 +405,9 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
             if item.demoClipURL != nil {
                 LinearGradient(
                     colors: [
-                        CSFDesign.violet.opacity(0.24),
+                        CSFDesign.violet.opacity(0.10),
                         .clear,
-                        CSFDesign.primary.opacity(0.18)
+                        CSFDesign.primary.opacity(0.16)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -468,23 +468,23 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
     private var topAtmosphere: some View {
         ZStack(alignment: .top) {
             LinearGradient(
-                colors: [
-                    CSFDesign.pageBackground.opacity(0.34),
-                    CSFDesign.violet.opacity(0.22),
-                    .clear
+                stops: [
+                    .init(color: CSFDesign.pageBackground.opacity(0.18), location: 0.00),
+                    .init(color: CSFDesign.accentMud.opacity(0.08), location: 0.38),
+                    .init(color: .clear, location: 1.00)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 210)
+            .frame(height: 138)
 
             HStack(spacing: 0) {
                 stageLight(color: CSFDesign.primary, rotation: -24, xOffset: -88)
                 Spacer(minLength: 0)
                 stageLight(color: CSFDesign.violet, rotation: 22, xOffset: 76)
             }
-            .frame(height: 180)
-            .padding(.top, -24)
+            .frame(height: 128)
+            .padding(.top, -44)
 
         }
         .allowsHitTesting(false)
@@ -566,18 +566,18 @@ private struct UploadClipPage<Picker: View, RailPicker: View>: View {
             .fill(
                 LinearGradient(
                     colors: [
-                        color.opacity(0.42),
-                        color.opacity(0.14),
+                        color.opacity(0.18),
+                        color.opacity(0.06),
                         .clear
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             )
-            .frame(width: 170, height: 250)
-            .blur(radius: 24)
+            .frame(width: 150, height: 190)
+            .blur(radius: 28)
             .rotationEffect(.degrees(rotation))
-            .offset(x: xOffset, y: -58)
+            .offset(x: xOffset, y: -72)
             .blendMode(.screen)
     }
 
@@ -873,7 +873,7 @@ private struct FullUploadButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline.weight(.bold))
-            .foregroundStyle(CSFDesign.textPrimary)
+            .foregroundStyle(CSFDesign.primary)
             .labelStyle(.titleAndIcon)
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
@@ -884,8 +884,9 @@ private struct FullUploadButtonStyle: ButtonStyle {
                     .fill(
                         LinearGradient(
                             colors: [
-                                CSFDesign.primary.opacity(configuration.isPressed ? 0.48 : 0.68),
-                                CSFDesign.violet.opacity(configuration.isPressed ? 0.22 : 0.34)
+                                CSFDesign.violet.opacity(configuration.isPressed ? 0.54 : 0.72),
+                                CSFDesign.surface.opacity(configuration.isPressed ? 0.80 : 0.92),
+                                CSFDesign.raisedSurface.opacity(configuration.isPressed ? 0.58 : 0.70)
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
@@ -897,9 +898,9 @@ private struct FullUploadButtonStyle: ButtonStyle {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                CSFDesign.textPrimary.opacity(0.55),
-                                CSFDesign.primary.opacity(0.72),
-                                CSFDesign.violet.opacity(0.42)
+                                CSFDesign.primary.opacity(0.86),
+                                CSFDesign.line.opacity(0.72),
+                                CSFDesign.violet.opacity(0.62)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing

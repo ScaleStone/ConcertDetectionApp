@@ -34,17 +34,19 @@ struct RootView: View {
 
     private var bottomNavigationGradient: some View {
         LinearGradient(
-            colors: [
-                .clear,
-                Color.black.opacity(0.10),
-                Color(red: 0.42, green: 0.43, blue: 0.43).opacity(0.34),
-                Color.black.opacity(0.44)
+            stops: [
+                .init(color: .clear, location: 0.00),
+                .init(color: .clear, location: 0.16),
+                .init(color: CSFDesign.accentMud.opacity(0.08), location: 0.38),
+                .init(color: CSFDesign.pageBackground.opacity(0.34), location: 0.58),
+                .init(color: CSFDesign.pageBackground.opacity(0.74), location: 0.82),
+                .init(color: CSFDesign.pageBackground.opacity(0.94), location: 1.00)
             ],
             startPoint: .top,
             endPoint: .bottom
         )
-        .frame(height: 154)
-        .blur(radius: 0.4)
+        .frame(height: 224)
+        .blur(radius: 8)
         .ignoresSafeArea(.container, edges: .bottom)
     }
 
@@ -204,9 +206,9 @@ private struct FloatingTabBar: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.46, green: 0.48, blue: 0.48).opacity(0.50),
-                            Color(red: 0.18, green: 0.19, blue: 0.19).opacity(0.76),
-                            Color.black.opacity(0.66)
+                            CSFDesign.raisedSurface.opacity(0.80),
+                            CSFDesign.surface.opacity(0.92),
+                            CSFDesign.pageBackground.opacity(0.94)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -218,7 +220,7 @@ private struct FloatingTabBar: View {
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    CSFDesign.textPrimary.opacity(0.12),
+                                    CSFDesign.accentAcid.opacity(0.14),
                                     .clear
                                 ],
                                 center: .topLeading,
@@ -232,9 +234,9 @@ private struct FloatingTabBar: View {
                         .stroke(
                             LinearGradient(
                                 colors: [
-                                    CSFDesign.textPrimary.opacity(0.26),
-                                    CSFDesign.textPrimary.opacity(0.06),
-                                    Color.black.opacity(0.16)
+                                    CSFDesign.accentAcid.opacity(0.28),
+                                    CSFDesign.border.opacity(0.70),
+                                    CSFDesign.pageBackground.opacity(0.90)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -256,8 +258,8 @@ private struct FloatingTabBar: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                CSFDesign.textPrimary.opacity(0.28),
-                                CSFDesign.textPrimary.opacity(0.16)
+                                CSFDesign.accentMud.opacity(0.95),
+                                CSFDesign.raisedSurface.opacity(0.72)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -270,7 +272,7 @@ private struct FloatingTabBar: View {
             Image(systemName: tab.icon)
                 .font(.system(size: tab == .upload ? 20 : 21, weight: .semibold))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(CSFDesign.textPrimary)
+                .foregroundStyle(isSelected ? CSFDesign.primary : CSFDesign.textPrimary)
 
             if tab == .clips {
                 Circle()

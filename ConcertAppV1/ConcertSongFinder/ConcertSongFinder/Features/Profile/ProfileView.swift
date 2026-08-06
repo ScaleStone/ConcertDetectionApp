@@ -49,7 +49,7 @@ struct ProfileView: View {
     private var avatar: some View {
         Text("MR")
             .font(.title2.weight(.bold))
-            .foregroundStyle(CSFDesign.textPrimary)
+            .foregroundStyle(CSFDesign.pageBackground)
             .frame(width: 82, height: 82)
             .background(CSFDesign.primary, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay {
